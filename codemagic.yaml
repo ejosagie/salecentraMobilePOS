@@ -1,0 +1,75 @@
+workflows:
+  ios-release:
+    name: iOS Release (App Store)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: SaleCentra App Store Connect
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.salecentra.wave
+      vars:
+        APP_STORE_APPLE_ID: 0000000000   # Replace with your App Store Connect numeric app ID
+        BUNDLE_ID: "com.salecentra.wave"
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter --version
+          flutter pub get
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install --repo-update
+      - name: Increment build number
+        script: |
+          cd $CM_BUILD_DIR
+          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID") + 1))
+          flutter build ipa --release \
+            --build-name=1.0.1 \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
+
+  android-release:
+    name: Android Release (Play Store)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      android_signing:
+        - SaleCentra Upload Keystore
+      vars:
+        PACKAGE_NAME: "com.salecentra.wave"
+      flutter: stable
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter --version
+          flutter pub get
+      - name: Build AAB
+        script: |
+          BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks=internal) + 1))
+          flutter build appbundle --release \
+            --build-name=1.0.1 \
+            --build-number=$BUILD_NUMBER
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal

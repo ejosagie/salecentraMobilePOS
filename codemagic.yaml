@@ -8,10 +8,10 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.salecentra.wave
+        bundle_identifier: com.neurowavesds.salecentra
       vars:
         APP_STORE_APPLE_ID: 0000000000   # Replace with your App Store Connect numeric app ID
-        BUNDLE_ID: "com.salecentra.wave"
+        BUNDLE_ID: "com.neurowavesds.salecentra"
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -53,7 +53,7 @@ workflows:
       android_signing:
         - SaleCentra Upload Keystore
       vars:
-        PACKAGE_NAME: "com.salecentra.wave"
+        PACKAGE_NAME: "com.neurowavesds.salecentra"
       flutter: stable
     scripts:
       - name: Set up Flutter

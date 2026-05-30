@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -15,6 +16,10 @@ class ApiService {
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 30));
 
+      if (response.body.trim().startsWith('<')) {
+        throw Exception('Server returned HTML (${response.statusCode}). Check that baseUrl is correct and the API endpoint exists.');
+      }
+
       final responseData = jsonDecode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -22,6 +27,12 @@ class ApiService {
       } else {
         throw Exception(responseData['error'] ?? 'Request failed');
       }
+    } on SocketException catch (_) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    } on HttpException catch (_) {
+      throw Exception('Unable to reach the server. Please try again later.');
+    } on FormatException catch (_) {
+      throw Exception('Invalid response from server. Please contact support.');
     } catch (e) {
       throw Exception('Network error: $e');
     }
@@ -32,6 +43,11 @@ class ApiService {
       final uri = Uri.parse('$baseUrl$endpoint').replace(queryParameters: params);
       
       final response = await http.get(uri).timeout(const Duration(seconds: 30));
+
+      if (response.body.trim().startsWith('<')) {
+        throw Exception('Server returned HTML (${response.statusCode}). Check that baseUrl is correct and the API endpoint exists.');
+      }
+
       final responseData = jsonDecode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -39,6 +55,12 @@ class ApiService {
       } else {
         throw Exception(responseData['error'] ?? 'Request failed');
       }
+    } on SocketException catch (_) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    } on HttpException catch (_) {
+      throw Exception('Unable to reach the server. Please try again later.');
+    } on FormatException catch (_) {
+      throw Exception('Invalid response from server. Please contact support.');
     } catch (e) {
       throw Exception('Network error: $e');
     }
@@ -52,6 +74,10 @@ class ApiService {
         body: jsonEncode(data),
       ).timeout(const Duration(seconds: 30));
 
+      if (response.body.trim().startsWith('<')) {
+        throw Exception('Server returned HTML (${response.statusCode}). Check that baseUrl is correct and the API endpoint exists.');
+      }
+
       final responseData = jsonDecode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -59,6 +85,12 @@ class ApiService {
       } else {
         throw Exception(responseData['error'] ?? 'Request failed');
       }
+    } on SocketException catch (_) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    } on HttpException catch (_) {
+      throw Exception('Unable to reach the server. Please try again later.');
+    } on FormatException catch (_) {
+      throw Exception('Invalid response from server. Please contact support.');
     } catch (e) {
       throw Exception('Network error: $e');
     }
@@ -70,6 +102,10 @@ class ApiService {
         Uri.parse('$baseUrl$endpoint'),
       ).timeout(const Duration(seconds: 30));
 
+      if (response.body.trim().startsWith('<')) {
+        throw Exception('Server returned HTML (${response.statusCode}). Check that baseUrl is correct and the API endpoint exists.');
+      }
+
       final responseData = jsonDecode(response.body);
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -77,6 +113,12 @@ class ApiService {
       } else {
         throw Exception(responseData['error'] ?? 'Request failed');
       }
+    } on SocketException catch (_) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    } on HttpException catch (_) {
+      throw Exception('Unable to reach the server. Please try again later.');
+    } on FormatException catch (_) {
+      throw Exception('Invalid response from server. Please contact support.');
     } catch (e) {
       throw Exception('Network error: $e');
     }

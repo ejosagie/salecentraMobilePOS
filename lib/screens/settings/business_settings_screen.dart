@@ -190,9 +190,9 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                                   width: 120,
                                   height: 120,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor.withOpacity(0.05),
+                                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                                    border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                                   ),
                                   child: _logoBase64 != null && _logoBase64!.isNotEmpty
                                       ? ClipRRect(
@@ -202,11 +202,11 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                                       : Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppTheme.primaryColor.withOpacity(0.5)),
+                                            Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppTheme.primaryColor.withValues(alpha: 0.5)),
                                             const SizedBox(height: 4),
                                             Text(
                                               'Add Logo',
-                                              style: TextStyle(fontSize: 12, color: AppTheme.primaryColor.withOpacity(0.7)),
+                                              style: TextStyle(fontSize: 12, color: AppTheme.primaryColor.withValues(alpha: 0.7)),
                                             ),
                                           ],
                                         ),

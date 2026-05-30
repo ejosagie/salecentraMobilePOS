@@ -171,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           LinearProgressIndicator(
             value: (_currentPage + 1) / 3,
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
           ),
           Expanded(
             child: PageView(
@@ -240,7 +240,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Text('Business Details', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   _buildDetailRow('Business Name', _user?.businessName ?? ''),
-                  _buildDetailRow('Contact Person', _user?.contactPerson ?? ''),
                   _buildDetailRow('Phone', _user?.phoneNumber ?? ''),
                   _buildDetailRow('Industry', _user?.industry ?? ''),
                   _buildDetailRow('Country', _user?.country ?? ''),
@@ -293,9 +292,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               width: 160,
               height: 160,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.05),
+                color: AppTheme.primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
               ),
               child: _logoBase64 != null && _logoBase64!.isNotEmpty
                   ? ClipRRect(
@@ -305,11 +304,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_photo_alternate_outlined, size: 48, color: AppTheme.primaryColor.withOpacity(0.5)),
+                        Icon(Icons.add_photo_alternate_outlined, size: 48, color: AppTheme.primaryColor.withValues(alpha: 0.5)),
                         const SizedBox(height: 8),
                         Text(
                           'Tap to upload logo',
-                          style: TextStyle(color: AppTheme.primaryColor.withOpacity(0.7)),
+                          style: TextStyle(color: AppTheme.primaryColor.withValues(alpha: 0.7)),
                         ),
                       ],
                     ),
@@ -409,7 +408,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ..._inventoryItems.map((item) => Card(
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                 child: const Icon(Icons.inventory_2_outlined, size: 18),
               ),
               title: Text(item.item),

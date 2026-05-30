@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: SaleCentra App Store Connect
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.neurowavesds.salecentra
       vars:
         APP_STORE_APPLE_ID: 6774866098
         BUNDLE_ID: "com.neurowavesds.salecentra"

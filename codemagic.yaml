@@ -37,16 +37,21 @@ workflows:
 
       - name: Increment build number
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          set -e
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || true)
+          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" = "0" ]; then
+            LATEST_BUILD_NUMBER=1
+          fi
           BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
-          echo "Using build number $BUILD_NUMBER"
+          echo "Latest build number found: $LATEST_BUILD_NUMBER"
+          echo "Using new build number: $BUILD_NUMBER"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
 
       - name: Build signed IPA
         script: |
           # IMPORTANT: Update --build-name before each release
           flutter build ipa --release \
-            --build-name=1.0.1 \
+            --build-name=1.0.2 \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
 

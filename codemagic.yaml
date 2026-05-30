@@ -20,16 +20,21 @@ workflows:
         script: |
           flutter --version
           flutter pub get
-      - name: Set up code signing
-        script: |
-          xcode-project use-profiles
       - name: Install CocoaPods dependencies
         script: |
-          cd ios && pod install --repo-update
+          find . -name "Podfile" -execdir pod install \;
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
       - name: Increment build number
         script: |
           cd $CM_BUILD_DIR
-          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID") + 1))
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          echo "Using build number $BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+      - name: Flutter build ipa
+        script: |
           flutter build ipa --release \
             --build-name=1.0.1 \
             --build-number=$BUILD_NUMBER \

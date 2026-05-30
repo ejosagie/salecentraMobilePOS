@@ -39,11 +39,13 @@ workflows:
         script: |
           set -e
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || true)
-          if [ -z "$LATEST_BUILD_NUMBER" ] || [ "$LATEST_BUILD_NUMBER" = "0" ]; then
-            LATEST_BUILD_NUMBER=1
+          if [ -n "$LATEST_BUILD_NUMBER" ] && [ "$LATEST_BUILD_NUMBER" -gt 0 ] 2>/dev/null; then
+            BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          else
+            # Fallback to timestamp to guarantee uniqueness if App Store lookup fails
+            BUILD_NUMBER=$(date +%s)
           fi
-          BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
-          echo "Latest build number found: $LATEST_BUILD_NUMBER"
+          echo "Latest build number found: ${LATEST_BUILD_NUMBER:-'none'}"
           echo "Using new build number: $BUILD_NUMBER"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
 

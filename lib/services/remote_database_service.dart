@@ -4,6 +4,7 @@ import '../models/customer.dart';
 import '../models/expense.dart';
 import '../models/debt.dart';
 import '../models/invoice.dart';
+import '../models/notification.dart';
 import 'api_service.dart';
 
 class RemoteDatabaseService {
@@ -128,6 +129,55 @@ class RemoteDatabaseService {
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to add customer');
     }
+  }
+
+  Future<void> updateCustomer(Customer customer) async {
+    final response = await ApiService.put('/customers/${customer.id}', {
+      'name': customer.name,
+      'email': customer.email,
+      'phone': customer.phone,
+      'address': customer.address,
+    });
+    if (!response['success']) {
+      throw Exception(response['error'] ?? 'Failed to update customer');
+    }
+  }
+
+  // ==================== NOTIFICATIONS ====================
+
+  Future<List<AppNotification>> getNotifications(String userId) async {
+    final response = await ApiService.get('/notifications', params: {'user_id': userId});
+    if (response['success']) {
+      return (response['notifications'] as List)
+          .map((n) => AppNotification.fromMap(n))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch notifications');
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    final response = await ApiService.put('/notifications/$notificationId/read', {});
+    if (!response['success']) {
+      throw Exception(response['error'] ?? 'Failed to mark notification as read');
+    }
+  }
+
+  // ==================== FORECAST ====================
+
+  Future<Map<String, dynamic>> getForecast(String userId, {int days = 30}) async {
+    final response = await ApiService.get('/forecast', params: {'user_id': userId, 'days': days.toString()});
+    if (response['success'] || response['error'] == 'INSUFFICIENT_DATA') {
+      return response;
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch forecast');
+  }
+
+  Future<Map<String, dynamic>> getPricingAnalysis(String userId) async {
+    final response = await ApiService.get('/pricing-analysis', params: {'user_id': userId});
+    if (response['success'] || response['error'] == 'INSUFFICIENT_DATA') {
+      return response;
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch pricing analysis');
   }
 
   // ==================== EXPENSES ====================

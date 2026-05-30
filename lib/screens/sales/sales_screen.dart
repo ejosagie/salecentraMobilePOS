@@ -237,14 +237,16 @@ class _SalesScreenState extends State<SalesScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      children: [
-        // Staff indicator
-        if (widget.isStaffMode)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: AppTheme.info.withOpacity(0.1),
+    return SafeArea(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          // Staff indicator
+          if (widget.isStaffMode)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: AppTheme.info.withValues(alpha: 0.1),
             child: Row(
               children: [
                 const Icon(Icons.badge_outlined, size: 16, color: AppTheme.info),
@@ -291,7 +293,7 @@ class _SalesScreenState extends State<SalesScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, -3),
                 ),
@@ -317,7 +319,7 @@ class _SalesScreenState extends State<SalesScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -363,6 +365,7 @@ class _SalesScreenState extends State<SalesScreen> {
             ),
           ),
       ],
+      ),
     );
   }
 
@@ -404,7 +407,7 @@ class _SalesScreenState extends State<SalesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textMuted.withOpacity(0.5)),
+            Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'No items available',
@@ -444,7 +447,7 @@ class _SalesScreenState extends State<SalesScreen> {
               children: [
                 Expanded(
                   child: Container(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     child: const Icon(
                       Icons.inventory_2,
                       size: 48,
@@ -499,7 +502,7 @@ class _SalesScreenState extends State<SalesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_cart_outlined, size: 64, color: AppTheme.textMuted.withOpacity(0.5)),
+            Icon(Icons.shopping_cart_outlined, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'Cart is empty',

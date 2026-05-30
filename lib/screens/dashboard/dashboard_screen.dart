@@ -10,7 +10,14 @@ import '../inventory/inventory_screen.dart';
 import '../sales/sales_screen.dart';
 import '../customers/customers_screen.dart';
 import '../reports/reports_screen.dart';
-import '../more/more_screen.dart';
+import '../settings/settings_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../invoices/invoices_screen.dart';
+import '../debts/debts_screen.dart';
+import '../expenses/expenses_screen.dart';
+import '../sales/sales_history_screen.dart';
+import '../forecast/forecast_screen.dart';
+import '../price_pilot/price_pilot_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,7 +28,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _authService = AuthService();
-  final _dbService = RemoteDatabaseService();
   
   User? _user;
   bool _isStaff = false;
@@ -45,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SalesScreen(),
       const CustomersScreen(),
       const ReportsScreen(),
-      const MoreScreen(),
+      const SettingsScreen(),
     ];
   }
 
@@ -137,42 +143,204 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showMoreMenu() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return SafeArea(
+            child: Column(
+              children: [
+                // Drag handle
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.textMuted.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Menu',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: GridView.count(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 0.85,
+                    children: [
+                      _buildMenuGridItem(
+                        icon: Icons.people_outline,
+                        label: 'Customers',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _selectedIndex = 3);
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.bar_chart_outlined,
+                        label: 'Reports',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _selectedIndex = 4);
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.receipt_outlined,
+                        label: 'Invoices',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const InvoicesScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: 'Debts',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DebtsScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.money_off_outlined,
+                        label: 'Expenses',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ExpensesScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.receipt_long_outlined,
+                        label: 'Sales History',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.insights_outlined,
+                        label: 'Forecast',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ForecastScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.published_with_changes_outlined,
+                        label: 'Price Pilot',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const PricePilotScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.notifications_outlined,
+                        label: 'Notifications',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.settings_outlined,
+                        label: 'Settings',
+                        color: AppTheme.primaryColor,
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _selectedIndex = 5);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                // Logout button at bottom
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: ListTile(
+                    leading: const Icon(Icons.logout, color: AppTheme.error),
+                    title: const Text('Logout', style: TextStyle(color: AppTheme.error)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _logout();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMenuGridItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: (color ?? AppTheme.primaryColor).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ListTile(
-              leading: const Icon(Icons.people_outline),
-              title: const Text('Customers'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => _selectedIndex = 3);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.bar_chart_outlined),
-              title: const Text('Reports'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => _selectedIndex = 4);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => _selectedIndex = 5);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppTheme.error),
-              title: const Text('Logout', style: TextStyle(color: AppTheme.error)),
-              onTap: () {
-                Navigator.pop(context);
-                _logout();
-              },
+            Icon(icon, size: 32, color: color ?? AppTheme.primaryColor),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -200,6 +368,8 @@ class _HomeScreenState extends State<_HomeScreen> {
   double _todaySales = 0;
   double _monthSales = 0;
   int _inventoryCount = 0;
+  int _todaySalesCount = 0;
+  int _customerCount = 0;
   double _receivables = 0;
   double _payables = 0;
   Map<String, double>? _fxRates;
@@ -208,6 +378,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   String _fromCurrency = 'USD';
   String _toCurrency = 'NGN';
   double _conversionAmount = 0;
+  int _unreadNotificationCount = 0;
   bool _isLoading = true;
 
   @override
@@ -280,12 +451,18 @@ class _HomeScreenState extends State<_HomeScreen> {
     final monthSales = await _dbService.getTotalSales(user.id, startDate: monthStart);
     final inventory = await _dbService.getInventory(user.id);
     final debtSummary = await _dbService.getDebtSummary(user.id);
+    final customers = await _dbService.getCustomers(user.id);
+    final todaySalesList = await _dbService.getSales(user.id, startDate: today);
+    final notifications = await _dbService.getNotifications(user.id);
 
     setState(() {
       _user = user;
       _todaySales = todaySales;
       _monthSales = monthSales;
       _inventoryCount = inventory.length;
+      _todaySalesCount = todaySalesList.length;
+      _customerCount = customers.length;
+      _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
       _receivables = debtSummary['owed_to_me'] ?? 0;
       _payables = debtSummary['i_owe'] ?? 0;
       _isLoading = false;
@@ -533,8 +710,30 @@ class _HomeScreenState extends State<_HomeScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (_unreadNotificationCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.logout),
@@ -817,7 +1016,7 @@ class _HomeScreenState extends State<_HomeScreen> {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard('Sales', '12', Icons.shopping_cart_outlined),
+          child: _buildStatCard('Sales', _todaySalesCount.toString(), Icons.shopping_cart_outlined),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -825,7 +1024,7 @@ class _HomeScreenState extends State<_HomeScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildStatCard('Customers', '8', Icons.people_outline),
+          child: _buildStatCard('Customers', _customerCount.toString(), Icons.people_outline),
         ),
       ],
     );

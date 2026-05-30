@@ -8,6 +8,10 @@ import '../debts/debts_screen.dart';
 import '../invoices/invoices_screen.dart';
 import '../settings/business_settings_screen.dart';
 import '../settings/staff_settings_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../forecast/forecast_screen.dart';
+import '../price_pilot/price_pilot_screen.dart';
+import '../sales/sales_history_screen.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -79,12 +83,6 @@ class _MoreScreenState extends State<MoreScreen> {
         const SnackBar(content: Text('Could not open support link')), 
       );
     }
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be available soon')),
-    );
   }
 
   String get _subscriptionText {
@@ -206,11 +204,57 @@ class _MoreScreenState extends State<MoreScreen> {
             context,
             icon: Icons.notifications_outlined,
             title: 'Notifications',
-            onTap: () => _showComingSoon('Notifications'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
           ),
-          
+
           const Divider(),
-          
+
+          // Tools section
+          _buildSectionHeader(context, 'Tools'),
+          _buildMenuItem(
+            context,
+            icon: Icons.insights_outlined,
+            title: 'Sales Forecast',
+            subtitle: 'Predict future revenue',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ForecastScreen()),
+              );
+            },
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.published_with_changes_outlined,
+            title: 'Price Pilot',
+            subtitle: 'Pricing and margin analysis',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PricePilotScreen()),
+              );
+            },
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.receipt_long_outlined,
+            title: 'Sales History',
+            subtitle: 'View recent sales and receipts',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
+              );
+            },
+          ),
+
+          const Divider(),
+
           // Support section
           _buildSectionHeader(context, 'Support'),
           _buildMenuItem(
@@ -224,12 +268,6 @@ class _MoreScreenState extends State<MoreScreen> {
             icon: Icons.mail_outline,
             title: 'Contact Support',
             onTap: _openSupportLink,
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.star_outline,
-            title: 'Rate the App',
-            onTap: () {},
           ),
           
           const Divider(),

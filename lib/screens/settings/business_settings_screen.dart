@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/user.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
@@ -27,6 +29,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
   final _confirmPasswordController = TextEditingController();
 
   User? _user;
+  String? _logoBase64;
   bool _isLoading = true;
   bool _isSavingProfile = false;
   bool _isChangingPassword = false;
@@ -72,6 +75,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
       if (mounted) {
         setState(() {
           _user = user;
+          _logoBase64 = user.logoBase64;
           _isLoading = false;
         });
       }
@@ -83,6 +87,16 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
         );
       }
     }
+  }
+
+  Future<void> _pickLogo() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 400, maxHeight: 400, imageQuality: 70);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _logoBase64 = base64Encode(bytes);
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -98,6 +112,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
         contactPerson: _contactPersonController.text.trim(),
         industry: _industryController.text.trim(),
         country: _countryController.text.trim(),
+        logoBase64: _logoBase64,
       );
 
       if (mounted) {
@@ -167,6 +182,44 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Business Profile', style: Theme.of(context).textTheme.titleLarge),
+                            const SizedBox(height: 16),
+                            Center(
+                              child: GestureDetector(
+                                onTap: _pickLogo,
+                                child: Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                                  ),
+                                  child: _logoBase64 != null && _logoBase64!.isNotEmpty
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: Image.memory(base64Decode(_logoBase64!), fit: BoxFit.cover),
+                                        )
+                                      : Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppTheme.primaryColor.withOpacity(0.5)),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Add Logo',
+                                              style: TextStyle(fontSize: 12, color: AppTheme.primaryColor.withOpacity(0.7)),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ),
+                            if (_logoBase64 != null && _logoBase64!.isNotEmpty)
+                              Center(
+                                child: TextButton(
+                                  onPressed: () => setState(() => _logoBase64 = null),
+                                  child: const Text('Remove Logo'),
+                                ),
+                              ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _businessNameController,

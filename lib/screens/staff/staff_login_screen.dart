@@ -91,9 +91,9 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.info.withOpacity(0.1),
+                    color: AppTheme.info.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.info.withOpacity(0.3)),
+                    border: Border.all(color: AppTheme.info.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [

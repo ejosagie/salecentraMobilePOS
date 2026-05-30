@@ -44,6 +44,7 @@ workflows:
 
       - name: Build signed IPA
         script: |
+          # IMPORTANT: Update --build-name before each release
           flutter build ipa --release \
             --build-name=1.0.1 \
             --build-number=$BUILD_NUMBER \

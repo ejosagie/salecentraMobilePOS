@@ -191,8 +191,9 @@ class AuthService {
     required String contactPerson,
     required String industry,
     required String country,
+    String? logoBase64,
   }) async {
-    final response = await ApiService.put('/settings/profile', {
+    final payload = {
       'user_id': userId,
       'business_name': businessName,
       'business_address': businessAddress,
@@ -200,7 +201,11 @@ class AuthService {
       'contact_person': contactPerson,
       'industry': industry,
       'country': country,
-    });
+    };
+    if (logoBase64 != null && logoBase64.isNotEmpty) {
+      payload['logo_base64'] = logoBase64;
+    }
+    final response = await ApiService.put('/settings/profile', payload);
 
     if (response['success']) {
       final user = User.fromMap(response['user']);
@@ -208,6 +213,13 @@ class AuthService {
       return user;
     }
     throw Exception(response['error'] ?? 'Failed to update business profile');
+  }
+
+  Future<void> completeOnboarding(String userId) async {
+    final response = await ApiService.post('/auth/complete-onboarding', {'user_id': userId});
+    if (!response['success']) {
+      throw Exception(response['error'] ?? 'Failed to complete onboarding');
+    }
   }
 
   Future<void> changePassword({

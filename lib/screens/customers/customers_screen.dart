@@ -78,13 +78,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
     });
   }
 
-  Future<void> _showAddCustomerDialog() async {
+  Future<void> _showCustomerDialog({Customer? existing}) async {
     final result = await showDialog<Customer>(
       context: context,
-      builder: (context) => const AddCustomerDialog(),
+      builder: (context) => CustomerDialog(customer: existing),
     );
 
-    if (result != null && _user != null) {
+    if (result == null || _user == null) return;
+
+    if (existing != null) {
+      await _dbService.updateCustomer(result);
+    } else {
       final customer = Customer(
         id: _uuid.v4(),
         userId: _user!.id,
@@ -93,10 +97,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         phone: result.phone,
         address: result.address,
       );
-
       await _dbService.addCustomer(customer);
-      _loadData();
     }
+    _loadData();
   }
 
   @override
@@ -107,7 +110,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: _showAddCustomerDialog,
+            onPressed: () => _showCustomerDialog(),
           ),
         ],
       ),
@@ -164,7 +167,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             ),
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
-                              onPressed: _showAddCustomerDialog,
+                              onPressed: () => _showCustomerDialog(),
                               icon: const Icon(Icons.add),
                               label: const Text('Add First Customer'),
                             ),
@@ -208,6 +211,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   ],
                                 ),
                                 isThreeLine: customer.email != null && customer.email!.isNotEmpty,
+                                onTap: () => _showCustomerDialog(existing: customer),
+                                trailing: const Icon(Icons.edit_outlined, size: 20),
                               ),
                             );
                           },
@@ -217,7 +222,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddCustomerDialog,
+        onPressed: () => _showCustomerDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Add Customer'),
       ),
@@ -255,19 +260,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 }
 
-class AddCustomerDialog extends StatefulWidget {
-  const AddCustomerDialog({super.key});
+class CustomerDialog extends StatefulWidget {
+  final Customer? customer;
+  const CustomerDialog({super.key, this.customer});
 
   @override
-  State<AddCustomerDialog> createState() => _AddCustomerDialogState();
+  State<CustomerDialog> createState() => _CustomerDialogState();
 }
 
-class _AddCustomerDialogState extends State<AddCustomerDialog> {
+class _CustomerDialogState extends State<CustomerDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _addressController = TextEditingController();
+  late final _nameController = TextEditingController(text: widget.customer?.name ?? '');
+  late final _phoneController = TextEditingController(text: widget.customer?.phone ?? '');
+  late final _emailController = TextEditingController(text: widget.customer?.email ?? '');
+  late final _addressController = TextEditingController(text: widget.customer?.address ?? '');
+
+  bool get _isEditing => widget.customer != null;
 
   @override
   void dispose() {
@@ -281,7 +289,7 @@ class _AddCustomerDialogState extends State<AddCustomerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Customer'),
+      title: Text(_isEditing ? 'Edit Customer' : 'Add Customer'),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -342,17 +350,18 @@ class _AddCustomerDialogState extends State<AddCustomerDialog> {
               Navigator.pop(
                 context,
                 Customer(
-                  id: '',
-                  userId: '',
+                  id: widget.customer?.id ?? '',
+                  userId: widget.customer?.userId ?? '',
                   name: _nameController.text.trim(),
                   phone: _phoneController.text.isEmpty ? null : _phoneController.text.trim(),
                   email: _emailController.text.isEmpty ? null : _emailController.text.trim(),
                   address: _addressController.text.isEmpty ? null : _addressController.text.trim(),
+                  createdAt: widget.customer?.createdAt,
                 ),
               );
             }
           },
-          child: const Text('Add'),
+          child: Text(_isEditing ? 'Save' : 'Add'),
         ),
       ],
     );

@@ -47,13 +47,26 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.login(
+      final user = await _authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      
+
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login failed. Please try again.')),
+          );
+        }
+        return;
+      }
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (user.onboardingComplete) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        } else {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
       }
     } catch (e) {
       if (mounted) {

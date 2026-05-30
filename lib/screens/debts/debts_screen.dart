@@ -39,7 +39,7 @@ class _DebtsScreenState extends State<DebtsScreen> {
     if (_selectedTab == 'owe') type = 'payable';
 
     final debts = await _dbService.getDebts(user.id, type: type);
-    final summary = await _dbService.getDebtSummary(user.id);
+    await _dbService.getDebtSummary(user.id);
 
     setState(() {
       _user = user;

@@ -1,7 +1,7 @@
 name: salecentra_wave
 description: SaleCentra Flutter - Smart Sales & Business Management
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.8+8
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -52,3 +52,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/fonts/
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf

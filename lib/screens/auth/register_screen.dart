@@ -81,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        Navigator.pushReplacementNamed(context, '/onboarding');
       }
     } catch (e) {
       if (mounted) {

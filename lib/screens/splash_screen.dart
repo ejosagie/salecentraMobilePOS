@@ -49,9 +49,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     final authService = AuthService();
     final isLoggedIn = await authService.isLoggedIn();
-    
+
     if (isLoggedIn) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      final user = await authService.getCurrentUser();
+      if (user != null && user.onboardingComplete) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else if (user != null) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }

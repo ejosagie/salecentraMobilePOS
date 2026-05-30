@@ -1,63 +1,63 @@
 workflows:
-ios-release:
-name: iOS Release (App Store)
-max_build_duration: 90
-instance_type: mac_mini_m2
+  ios-release:
+    name: iOS Release (App Store)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
 
+    integrations:
+      app_store_connect: SaleCentra App Store Connect
 
-integrations:
-  app_store_connect: SaleCentra App Store Connect
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
 
-environment:
-  ios_signing:
-    distribution_type: app_store
-    bundle_identifier: com.neurowavesds.salecentra
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.neurowavesds.salecentra
 
-  vars:
-    APP_STORE_APPLE_ID: 6774866098
+      vars:
+        APP_STORE_APPLE_ID: "6774866098"
 
-  flutter: stable
-  xcode: latest
-  cocoapods: default
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter --version
+          flutter pub get
 
-scripts:
-  - name: Set up Flutter
-    script: |
-      flutter --version
-      flutter pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+          cd ..
 
-  - name: Install CocoaPods dependencies
-    script: |
-      cd ios
-      pod install
-      cd ..
+      - name: Increment build number
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          echo "Using build number $BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
 
-  - name: Increment build number
-    script: |
-      LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
-      BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-      echo "Using build number $BUILD_NUMBER"
-      echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+      - name: Build Flutter iOS
+        script: |
+          flutter build ios --release \
+            --build-name=1.0.1 \
+            --build-number=$BUILD_NUMBER
 
-  - name: Build Flutter iOS
-    script: |
-      flutter build ios --release \
-        --build-name=1.0.1 \
-        --build-number=$BUILD_NUMBER
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/ios/Runner.xcworkspace" \
+            --scheme "Runner"
 
-  - name: Build signed IPA
-    script: |
-      xcode-project build-ipa \
-        --workspace "$CM_BUILD_DIR/ios/Runner.xcworkspace" \
-        --scheme "Runner"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
 
-artifacts:
-  - build/ios/ipa/*.ipa
-  - /tmp/xcodebuild_logs/*.log
-
-publishing:
-  app_store_connect:
-    auth: integration
-    submit_to_testflight: true
-    beta_groups:
-      - Internal Testers
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers

@@ -3,8 +3,10 @@ workflows:
     name: iOS Release (App Store)
     max_build_duration: 90
     instance_type: mac_mini_m2
+
     integrations:
       app_store_connect: SaleCentra App Store Connect
+
     environment:
       vars:
         APP_STORE_APPLE_ID: 6774866098
@@ -12,26 +14,17 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+
     scripts:
       - name: Set up Flutter
         script: |
           flutter --version
           flutter pub get
+
       - name: Install CocoaPods dependencies
         script: |
           find . -name "Podfile" -execdir pod install \;
-      - name: Fetch (or create) signing files
-        script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-      - name: Add fetched certificates to keychain
-        script: |
-          keychain initialize
-          keychain add-certificates
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
+
       - name: Increment build number
         script: |
           cd $CM_BUILD_DIR
@@ -39,52 +32,29 @@ workflows:
           BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
           echo "Using build number $BUILD_NUMBER"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+
       - name: Flutter build (no codesign)
         script: |
           flutter build ios --release --no-codesign \
             --build-name=1.0.1 \
             --build-number=$BUILD_NUMBER
-      - name: Build signed IPA with xcode-project
+
+      - name: Build signed IPA
         script: |
           xcode-project build-ipa \
             --workspace "$CM_BUILD_DIR/ios/Runner.xcworkspace" \
-            --scheme "Runner"
+            --scheme "Runner" \
+            --archive-path "$CM_BUILD_DIR/build/ios/archive" \
+            --export-options-plist "$CM_EXPORT_OPTIONS"
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
+
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
         beta_groups:
           - Internal Testers
-
-  android-release:
-    name: Android Release (Play Store)
-    max_build_duration: 60
-    instance_type: linux_x2
-    environment:
-      android_signing:
-        - SaleCentra Upload Keystore
-      vars:
-        PACKAGE_NAME: "com.neurowavesds.salecentra"
-      flutter: stable
-    scripts:
-      - name: Set up Flutter
-        script: |
-          flutter --version
-          flutter pub get
-      - name: Build AAB
-        script: |
-          BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks=internal) + 1))
-          flutter build appbundle --release \
-            --build-name=1.0.1 \
-            --build-number=$BUILD_NUMBER
-    artifacts:
-      - build/**/outputs/**/*.aab
-      - build/**/outputs/**/mapping.txt
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal

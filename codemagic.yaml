@@ -66,7 +66,87 @@ workflows:
           xcode-project build-ipa \
             --workspace "$CM_BUILD_DIR/ios/Runner.xcworkspace" \
             --scheme "Runner" \
-            --archive-path "$CM_BUILD_DIR/build/ios/archive" \
+            --export-options-plist exportOptions.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
+workflows:
+  ios-release:
+    name: iOS Release (App Store)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: SaleCentra App Store Connect
+
+    environment:
+      vars:
+        APP_STORE_APPLE_ID: 6774866098
+        BUNDLE_ID: "com.neurowavesds.salecentra"
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter --version
+          flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+
+      - name: Increment build number
+        script: |
+          cd $CM_BUILD_DIR
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
+          BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          echo "Using build number $BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+
+      - name: Flutter build (no codesign)
+        script: |
+          flutter build ios --release --no-codesign \
+            --build-name=1.0.1 \
+            --build-number=$BUILD_NUMBER
+
+      - name: Create export options plist
+        script: |
+          cat <<EOF > exportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.neurowavesds.salecentra</key>
+              <string>SaleCentra App Store Profile</string>
+            </dict>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/ios/Runner.xcworkspace" \
+            --scheme "Runner" \
             --export-options-plist exportOptions.plist
 
     artifacts:

@@ -8,6 +8,8 @@ class AuthService {
   static const String _currentUserKey = 'current_user';
   static const String _isStaffLoginKey = 'is_staff_login';
   static const String _staffNameKey = 'staff_name';
+  static const String _lastActivityKey = 'last_activity';
+  static const int _sessionTimeoutMinutes = 30;
 
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
@@ -56,6 +58,7 @@ class AuthService {
       );
 
       await _saveCurrentUser(user);
+      await updateLastActivity();
       return user;
     }
     throw Exception(response['error'] ?? 'Registration failed');
@@ -89,6 +92,7 @@ class AuthService {
       );
 
       await _saveCurrentUser(user);
+      await updateLastActivity();
       return user;
     }
     throw Exception(response['error'] ?? 'Login failed');
@@ -122,6 +126,7 @@ class AuthService {
       );
 
       await _saveCurrentUser(user, isStaffLogin: true, staffName: staffName);
+      await updateLastActivity();
       return {
         'user': user,
         'staffName': staffName,
@@ -130,13 +135,17 @@ class AuthService {
     throw Exception(response['error'] ?? 'Staff login failed');
   }
 
-  Future<void> _saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName}) async {
+  Future<void> saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_currentUserKey, jsonEncode(user.toMap()));
     await prefs.setBool(_isStaffLoginKey, isStaffLogin);
     if (staffName != null) {
       await prefs.setString(_staffNameKey, staffName);
     }
+  }
+
+  Future<void> _saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName}) async {
+    await saveCurrentUser(user, isStaffLogin: isStaffLogin, staffName: staffName);
   }
 
   Future<User?> getCurrentUser() async {
@@ -173,6 +182,25 @@ class AuthService {
     return user != null;
   }
 
+  Future<void> updateLastActivity() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastActivityKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<bool> isSessionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastActivity = prefs.getInt(_lastActivityKey);
+    if (lastActivity == null) return false;
+    final elapsed = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastActivity));
+    return elapsed.inMinutes > _sessionTimeoutMinutes;
+  }
+
+  Future<void> logoutIfExpired() async {
+    if (await isSessionExpired()) {
+      await logout();
+    }
+  }
+
   Future<User> getBusinessProfile(String userId) async {
     final response = await ApiService.get('/settings/profile', params: {'user_id': userId});
     if (response['success']) {
@@ -192,6 +220,7 @@ class AuthService {
     required String industry,
     required String country,
     String? logoBase64,
+    String? currency,
   }) async {
     final payload = {
       'user_id': userId,
@@ -204,6 +233,9 @@ class AuthService {
     };
     if (logoBase64 != null && logoBase64.isNotEmpty) {
       payload['logo_base64'] = logoBase64;
+    }
+    if (currency != null && currency.isNotEmpty) {
+      payload['currency'] = currency;
     }
     final response = await ApiService.put('/settings/profile', payload);
 

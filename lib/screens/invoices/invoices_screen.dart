@@ -27,6 +27,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   String _selectedFilter = 'all';
   final _searchController = TextEditingController();
 
+  String get currencySymbol => _user?.currencySymbol ?? '₦';
+
   @override
   void initState() {
     super.initState();
@@ -224,7 +226,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               _buildDetailRow('Due Date:', invoice.dueDate != null 
                   ? DateFormat('yyyy-MM-dd').format(invoice.dueDate!) 
                   : 'Not set'),
-              _buildDetailRow('Total:', '₦${invoice.total.toStringAsFixed(2)}'),
+              _buildDetailRow('Total:', '$currencySymbol${invoice.total.toStringAsFixed(2)}'),
               _buildDetailRow('Status:', invoice.status.toUpperCase()),
               if (invoice.notes != null) ...[
                 const SizedBox(height: 8),
@@ -447,7 +449,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                 ),
                               ),
                               title: Text(
-                                '₦${invoice.total.toStringAsFixed(2)}',
+                                '$currencySymbol${invoice.total.toStringAsFixed(2)}',
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Column(

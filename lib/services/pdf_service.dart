@@ -102,7 +102,7 @@ class PdfService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Quantity: ${sale.quantity}'),
-                  pw.Text('Price: ₦${sale.price.toStringAsFixed(2)}'),
+                  pw.Text('Price: ${user.currencySymbol}${sale.price.toStringAsFixed(2)}'),
                 ],
               ),
               pw.SizedBox(height: 10),
@@ -118,7 +118,7 @@ class PdfService {
                     ),
                   ),
                   pw.Text(
-                    '₦${sale.total.toStringAsFixed(2)}',
+                    '${user.currencySymbol}${sale.total.toStringAsFixed(2)}',
                     style: pw.TextStyle(
                       fontSize: 18,
                       fontWeight: pw.FontWeight.bold,
@@ -244,7 +244,7 @@ class PdfService {
               ),
               pw.SizedBox(height: 5),
               pw.Text(
-                '₦${invoice.total.toStringAsFixed(2)}',
+                '${user.currencySymbol}${invoice.total.toStringAsFixed(2)}',
                 style: pw.TextStyle(
                   fontSize: 24,
                   fontWeight: pw.FontWeight.bold,

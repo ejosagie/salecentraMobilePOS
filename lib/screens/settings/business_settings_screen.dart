@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/user.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/constants.dart';
 
 class BusinessSettingsScreen extends StatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -30,6 +31,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
 
   User? _user;
   String? _logoBase64;
+  String _selectedCurrency = 'NGN';
   bool _isLoading = true;
   bool _isSavingProfile = false;
   bool _isChangingPassword = false;
@@ -71,6 +73,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
       _contactPersonController.text = user.contactPerson;
       _industryController.text = user.industry;
       _countryController.text = user.country;
+      _selectedCurrency = user.currency;
 
       if (mounted) {
         setState(() {
@@ -113,6 +116,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
         industry: _industryController.text.trim(),
         country: _countryController.text.trim(),
         logoBase64: _logoBase64,
+        currency: _selectedCurrency,
       );
 
       if (mounted) {
@@ -255,6 +259,25 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                               controller: _countryController,
                               decoration: const InputDecoration(labelText: 'Country'),
                               validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              value: _selectedCurrency,
+                              decoration: const InputDecoration(
+                                labelText: 'Currency',
+                                prefixIcon: Icon(Icons.currency_exchange),
+                              ),
+                              items: AppConstants.currencySymbols.entries.map((entry) {
+                                return DropdownMenuItem<String>(
+                                  value: entry.key,
+                                  child: Text('${entry.value}  ${entry.key}'),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _selectedCurrency = value);
+                                }
+                              },
                             ),
                             const SizedBox(height: 16),
                             SizedBox(

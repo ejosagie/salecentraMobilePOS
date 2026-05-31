@@ -6,6 +6,7 @@ import '../../models/inventory.dart';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';
 import '../../utils/theme.dart';
+import '../../utils/constants.dart';
 import '../../widgets/app_logo.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   User? _user;
   String? _logoBase64;
+  String _selectedCurrency = 'NGN';
   bool _isLoading = true;
   bool _isSaving = false;
   int _currentPage = 0;
@@ -53,6 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() {
         _user = user;
         _logoBase64 = user?.logoBase64;
+        _selectedCurrency = user?.currency ?? 'NGN';
         _isLoading = false;
       });
     }
@@ -102,19 +105,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Save logo if uploaded
-      if (_logoBase64 != null && _logoBase64!.isNotEmpty) {
-        await _authService.updateBusinessProfile(
-          userId: _user!.id,
-          businessName: _user!.businessName,
-          businessAddress: _user!.businessAddress,
-          phoneNumber: _user!.phoneNumber,
-          contactPerson: _user!.contactPerson,
-          industry: _user!.industry,
-          country: _user!.country,
-          logoBase64: _logoBase64,
-        );
-      }
+      // Save logo and currency to backend
+      await _authService.updateBusinessProfile(
+        userId: _user!.id,
+        businessName: _user!.businessName,
+        businessAddress: _user!.businessAddress,
+        phoneNumber: _user!.phoneNumber,
+        contactPerson: _user!.contactPerson,
+        industry: _user!.industry,
+        country: _user!.country,
+        logoBase64: _logoBase64,
+        currency: _selectedCurrency,
+      );
 
       // Save inventory items
       for (final inv in _inventoryItems) {
@@ -243,6 +245,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _buildDetailRow('Phone', _user?.phoneNumber ?? ''),
                   _buildDetailRow('Industry', _user?.industry ?? ''),
                   _buildDetailRow('Country', _user?.country ?? ''),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _selectedCurrency,
+                    decoration: const InputDecoration(
+                      labelText: 'Currency',
+                      prefixIcon: Icon(Icons.currency_exchange),
+                    ),
+                    items: AppConstants.currencySymbols.entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text('${entry.value}  ${entry.key}'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedCurrency = value);
+                      }
+                    },
+                  ),
                 ],
               ),
             ),

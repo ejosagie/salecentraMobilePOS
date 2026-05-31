@@ -565,7 +565,7 @@ class _HomeScreenState extends State<_HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            value == null ? '--' : '₦${value.toStringAsFixed(2)}',
+            value == null ? '--' : '$currencySymbol${value.toStringAsFixed(2)}',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ],

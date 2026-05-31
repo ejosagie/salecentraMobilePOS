@@ -109,6 +109,52 @@ class User {
     return DateTime.now().isBefore(trialEnd!);
   }
 
+  User copyWith({
+    String? id,
+    String? email,
+    String? passwordHash,
+    String? businessName,
+    String? businessAddress,
+    String? phoneNumber,
+    String? contactPerson,
+    String? industry,
+    String? country,
+    String? currency,
+    DateTime? trialStart,
+    DateTime? trialEnd,
+    String? subscriptionStatus,
+    DateTime? subscriptionStart,
+    DateTime? subscriptionEnd,
+    bool? onboardingComplete,
+    String? logoBase64,
+    bool? salesEntryEnabled,
+    String? salesEntryPasswordHash,
+    String? salesEntryStaffName,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      passwordHash: passwordHash ?? this.passwordHash,
+      businessName: businessName ?? this.businessName,
+      businessAddress: businessAddress ?? this.businessAddress,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      contactPerson: contactPerson ?? this.contactPerson,
+      industry: industry ?? this.industry,
+      country: country ?? this.country,
+      currency: currency ?? this.currency,
+      trialStart: trialStart ?? this.trialStart,
+      trialEnd: trialEnd ?? this.trialEnd,
+      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      subscriptionStart: subscriptionStart ?? this.subscriptionStart,
+      subscriptionEnd: subscriptionEnd ?? this.subscriptionEnd,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      logoBase64: logoBase64 ?? this.logoBase64,
+      salesEntryEnabled: salesEntryEnabled ?? this.salesEntryEnabled,
+      salesEntryPasswordHash: salesEntryPasswordHash ?? this.salesEntryPasswordHash,
+      salesEntryStaffName: salesEntryStaffName ?? this.salesEntryStaffName,
+    );
+  }
+
   String get currencySymbol {
     const symbols = {
       'NGN': '₦',

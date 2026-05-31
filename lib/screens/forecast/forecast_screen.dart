@@ -14,10 +14,13 @@ class _ForecastScreenState extends State<ForecastScreen> {
   final _authService = AuthService();
   final _dbService = RemoteDatabaseService();
 
+  User? _user;
   int _selectedDays = 30;
   bool _isLoading = true;
   Map<String, dynamic>? _data;
   String? _error;
+
+  String get currencySymbol => _user?.currencySymbol ?? '₦';
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _ForecastScreenState extends State<ForecastScreen> {
         });
         return;
       }
+      _user = user;
       final result = await _dbService.getForecast(user.id, days: _selectedDays);
       if (mounted) {
         setState(() {
@@ -168,7 +172,7 @@ class _ForecastScreenState extends State<ForecastScreen> {
           // Predicted Total
           _buildSummaryCard(
             'Predicted Revenue',
-            '₦$total',
+            '$currencySymbol$total',
             Icons.trending_up,
             AppTheme.primaryColor,
             'Next $_selectedDays days',
@@ -186,7 +190,7 @@ class _ForecastScreenState extends State<ForecastScreen> {
           // Daily Average
           _buildSummaryCard(
             'Average Daily Sales',
-            '₦$avg',
+            '$currencySymbol$avg',
             Icons.calendar_today,
             AppTheme.info,
             'Per day over next $_selectedDays days',

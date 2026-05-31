@@ -14,10 +14,13 @@ class _PricePilotScreenState extends State<PricePilotScreen> {
   final _authService = AuthService();
   final _dbService = RemoteDatabaseService();
 
+  User? _user;
   bool _isLoading = true;
   Map<String, dynamic>? _data;
   String? _error;
   String _filter = 'all';
+
+  String get currencySymbol => _user?.currencySymbol ?? '₦';
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _PricePilotScreenState extends State<PricePilotScreen> {
         });
         return;
       }
+      _user = user;
       final result = await _dbService.getPricingAnalysis(user.id);
       if (mounted) {
         setState(() {
@@ -265,7 +269,7 @@ class _PricePilotScreenState extends State<PricePilotScreen> {
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          'Margin: ${margin.toStringAsFixed(1)}% | Sell: ₦${sell.toStringAsFixed(2)}',
+          'Margin: ${margin.toStringAsFixed(1)}% | Sell: $currencySymbol${sell.toStringAsFixed(2)}',
           style: TextStyle(
             color: isLow ? AppTheme.error : AppTheme.success,
             fontSize: 13,
@@ -279,8 +283,8 @@ class _PricePilotScreenState extends State<PricePilotScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Divider(),
-                _buildDetailRow('Cost Price', '₦${cost.toStringAsFixed(2)}'),
-                _buildDetailRow('Current Sell Price', '₦${sell.toStringAsFixed(2)}'),
+                _buildDetailRow('Cost Price', '$currencySymbol${cost.toStringAsFixed(2)}'),
+                _buildDetailRow('Current Sell Price', '$currencySymbol${sell.toStringAsFixed(2)}'),
                 _buildDetailRow('Current Margin', '${margin.toStringAsFixed(1)}%'),
                 const SizedBox(height: 8),
                 Text(
@@ -288,8 +292,8 @@ class _PricePilotScreenState extends State<PricePilotScreen> {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                _buildDetailRow('30% margin', '₦${suggested30.toStringAsFixed(2)}'),
-                _buildDetailRow('50% margin', '₦${suggested50.toStringAsFixed(2)}'),
+                _buildDetailRow('30% margin', '$currencySymbol${suggested30.toStringAsFixed(2)}'),
+                _buildDetailRow('50% margin', '$currencySymbol${suggested50.toStringAsFixed(2)}'),
               ],
             ),
           ),

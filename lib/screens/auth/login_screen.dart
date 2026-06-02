@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_logo.dart';
+import '../account/account_status_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -62,7 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        if (user.onboardingComplete) {
+        if (user.isAccessBlocked) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
+          );
+        } else if (user.onboardingComplete) {
           Navigator.pushReplacementNamed(context, '/dashboard');
         } else {
           Navigator.pushReplacementNamed(context, '/onboarding');

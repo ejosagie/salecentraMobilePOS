@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import 'business_settings_screen.dart';
@@ -16,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _subscriptionStatus = 'trial';
   int? _daysRemaining;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -27,9 +29,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = await AuthService().getCurrentUser();
     if (user != null) {
       setState(() {
-        _subscriptionStatus = user.subscriptionStatus;
-        if (user.trialEnd != null) {
-          _daysRemaining = user.trialEnd!.difference(DateTime.now()).inDays;
+        _subscriptionStatus = user.effectiveStatus;
+        _endDate = _subscriptionStatus == 'active' ? user.subscriptionEnd : user.trialEnd;
+        if (_endDate != null) {
+          _daysRemaining = _endDate!.difference(DateTime.now()).inDays;
         }
       });
     }
@@ -49,21 +52,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openUpgradeLink() async {
     final user = await AuthService().getCurrentUser();
     if (user == null) return;
-    // Placeholder: open web upgrade page
+    if (_subscriptionStatus == 'suspended') {
+      await _openSupportLink();
+      return;
+    }
+    final uri = Uri.https('salecentra.com', '/upgrade_account/', {
+      'email': user.email,
+    });
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open upgrade page')),
+      );
+    }
   }
 
   String get _subscriptionText {
-    if (_subscriptionStatus == 'active') return 'Active';
-    if (_daysRemaining == null || (_daysRemaining! < 0)) return 'Expired';
-    if (_daysRemaining! <= 7) return '$_daysRemaining days left';
-    return 'Trial';
+    switch (_subscriptionStatus) {
+      case 'active':
+        return 'Active';
+      case 'suspended':
+        return 'Suspended';
+      case 'expired':
+        return 'Expired';
+      default:
+        if (_daysRemaining != null && _daysRemaining! >= 0 && _daysRemaining! <= 7) {
+          return '$_daysRemaining days left';
+        }
+        return 'Trial';
+    }
   }
 
   Color get _subscriptionColor {
-    if (_subscriptionStatus == 'active') return AppTheme.success;
-    if (_daysRemaining == null || (_daysRemaining! < 0)) return AppTheme.error;
-    if (_daysRemaining! <= 7) return AppTheme.warning;
-    return AppTheme.info;
+    switch (_subscriptionStatus) {
+      case 'active':
+        return AppTheme.success;
+      case 'suspended':
+      case 'expired':
+        return AppTheme.error;
+      default:
+        if (_daysRemaining != null && _daysRemaining! <= 7) return AppTheme.warning;
+        return AppTheme.info;
+    }
+  }
+
+  String get _subscriptionSubtitle {
+    final dateText = _endDate != null
+        ? 'Ends ${DateFormat('dd MMM yyyy').format(_endDate!)}'
+        : '';
+    switch (_subscriptionStatus) {
+      case 'active':
+        return dateText.isEmpty ? 'Plan: Active' : 'Plan: Active  •  $dateText';
+      case 'suspended':
+        return 'Account suspended - Contact support';
+      case 'expired':
+        return 'Expired - Upgrade now';
+      default:
+        return dateText.isEmpty ? 'Trial' : 'Trial  •  $dateText';
+    }
   }
 
   @override
@@ -81,11 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               context,
               icon: Icons.workspace_premium_outlined,
               title: 'Subscription',
-              subtitle: _subscriptionStatus == 'active'
-                  ? 'Plan: Active'
-                  : _subscriptionText == 'Expired'
-                      ? 'Trial expired - Upgrade now'
-                      : 'Trial: $_subscriptionText',
+              subtitle: _subscriptionSubtitle,
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(

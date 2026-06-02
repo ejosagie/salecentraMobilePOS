@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../utils/theme.dart';
 import '../widgets/app_logo.dart';
+import 'account/account_status_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -52,7 +53,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     if (isLoggedIn) {
       final user = await authService.getCurrentUser();
-      if (user != null && user.onboardingComplete) {
+      if (user != null && user.isAccessBlocked) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
+        );
+      } else if (user != null && user.onboardingComplete) {
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else if (user != null) {
         Navigator.pushReplacementNamed(context, '/onboarding');

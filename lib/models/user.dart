@@ -109,6 +109,35 @@ class User {
     return DateTime.now().isBefore(trialEnd!);
   }
 
+  /// Computes the real, current account status instead of trusting the
+  /// raw stored value. Mirrors the web app's get_user_status logic.
+  /// Returns one of: 'active', 'trial', 'expired', 'suspended'.
+  String get effectiveStatus {
+    final status = subscriptionStatus.toLowerCase();
+
+    if (status == 'suspended') return 'suspended';
+
+    if (status == 'active') {
+      if (subscriptionEnd != null && DateTime.now().isAfter(subscriptionEnd!)) {
+        return 'expired';
+      }
+      return 'active';
+    }
+
+    if (status == 'expired') return 'expired';
+
+    // Trial (default): expired if no end date or past the end date.
+    if (trialEnd == null) return 'expired';
+    if (DateTime.now().isAfter(trialEnd!)) return 'expired';
+    return 'trial';
+  }
+
+  /// True when the account should be blocked from using the app.
+  bool get isAccessBlocked {
+    final status = effectiveStatus;
+    return status == 'expired' || status == 'suspended';
+  }
+
   User copyWith({
     String? id,
     String? email,

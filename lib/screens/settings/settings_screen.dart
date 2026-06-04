@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
@@ -104,9 +105,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'active':
         return dateText.isEmpty ? 'Plan: Active' : 'Plan: Active  •  $dateText';
       case 'suspended':
-        return 'Account suspended - Contact support';
+        return Platform.isIOS ? 'Account suspended' : 'Account suspended - Contact support';
       case 'expired':
-        return 'Expired - Upgrade now';
+        return Platform.isIOS ? 'Expired' : 'Expired - Upgrade now';
       default:
         return dateText.isEmpty ? 'Trial' : 'Trial  •  $dateText';
     }
@@ -143,7 +144,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              onTap: _openUpgradeLink,
+              onTap: Platform.isIOS
+                  ? () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Account Status'),
+                          content: const Text('Please manage your account using the service\'s standard account management channels.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  : _openUpgradeLink,
             ),
             _buildMenuItem(
               context,

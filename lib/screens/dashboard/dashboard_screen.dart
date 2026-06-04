@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
@@ -919,9 +920,9 @@ class _HomeScreenState extends State<_HomeScreen> {
             const SizedBox(height: 8),
             Text(
               daysRemaining == 0
-                  ? 'Your trial ends today. Upgrade now to keep using SaleCentra.'
+                  ? (Platform.isIOS ? 'Your trial ends today.' : 'Your trial ends today. Upgrade now to keep using SaleCentra.')
                   : daysRemaining == 1
-                      ? '1 day remaining on your trial. Upgrade to continue using all features.'
+                      ? (Platform.isIOS ? '1 day remaining on your trial.' : '1 day remaining on your trial. Upgrade to continue using all features.')
                       : '$daysRemaining days remaining on your trial.',
               style: TextStyle(
                 fontSize: 13,
@@ -933,8 +934,8 @@ class _HomeScreenState extends State<_HomeScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _openUpgradeLink,
-                icon: const Icon(Icons.rocket_launch_outlined, size: 18),
-                label: const Text('Upgrade Now'),
+                icon: Icon(Platform.isIOS ? Icons.info_outline : Icons.rocket_launch_outlined, size: 18),
+                label: Text(Platform.isIOS ? 'Account Status' : 'Upgrade Now'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isUrgent ? AppTheme.error : AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -971,9 +972,11 @@ class _HomeScreenState extends State<_HomeScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Your free trial has ended. Upgrade to continue using SaleCentra.',
-              style: TextStyle(
+            Text(
+              Platform.isIOS
+                  ? 'Your free trial has ended.'
+                  : 'Your free trial has ended. Upgrade to continue using SaleCentra.',
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
               ),
@@ -983,8 +986,8 @@ class _HomeScreenState extends State<_HomeScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _openUpgradeLink,
-                icon: const Icon(Icons.rocket_launch_outlined, size: 18),
-                label: const Text('Upgrade Now'),
+                icon: Icon(Platform.isIOS ? Icons.info_outline : Icons.rocket_launch_outlined, size: 18),
+                label: Text(Platform.isIOS ? 'Account Status' : 'Upgrade Now'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.error,
                   foregroundColor: Colors.white,
@@ -999,6 +1002,23 @@ class _HomeScreenState extends State<_HomeScreen> {
 
   Future<void> _openUpgradeLink() async {
     if (_user == null) return;
+
+    if (Platform.isIOS) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Account Status'),
+          content: const Text('Please manage your account using the service\'s standard account management channels.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     final uri = Uri.https('salecentra.com', '/upgrade_account/', {
       'email': _user!.email,

@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/user.dart';
@@ -148,19 +149,42 @@ class _AccountStatusScreenState extends State<AccountStatusScreen> {
                       ),
                 ),
                 const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: suspended ? _openSupport : _openUpgrade,
-                    icon: Icon(suspended ? Icons.support_agent : Icons.rocket_launch_outlined, size: 18),
-                    label: Text(suspended ? 'Contact Support' : 'Upgrade Now'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                if (Platform.isIOS) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: accent.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      suspended
+                          ? 'Your account status is suspended. Please manage your account using the service\'s standard account management channels.'
+                          : 'Your subscription status is inactive. Please manage your account using the service\'s standard account management channels.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
                     ),
                   ),
-                ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: suspended ? _openSupport : _openUpgrade,
+                      icon: Icon(suspended ? Icons.support_agent : Icons.rocket_launch_outlined, size: 18),
+                      label: Text(suspended ? 'Contact Support' : 'Upgrade Now'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,

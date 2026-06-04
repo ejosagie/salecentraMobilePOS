@@ -150,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Account Status'),
-                          content: const Text('Please manage your account using the service\'s standard account management channels.'),
+                          content: const Text('Account and subscription management are available outside the app.'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),

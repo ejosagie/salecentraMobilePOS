@@ -97,10 +97,18 @@ class _AccountStatusScreenState extends State<AccountStatusScreen> {
     final suspended = _isSuspended;
     final Color accent = suspended ? AppTheme.error : AppTheme.warning;
     final IconData icon = suspended ? Icons.block : Icons.workspace_premium_outlined;
-    final String title = suspended ? 'Account Suspended' : 'Subscription Expired';
-    final String message = suspended
-        ? 'Your account has been suspended. Please contact our support team to resolve this and restore access.'
-        : 'Your free trial or subscription has ended. Upgrade your plan to continue using SaleCentra and access your business data.';
+    
+    final String title = Platform.isIOS
+        ? (suspended ? 'Account Suspended' : 'Account Access Required')
+        : (suspended ? 'Account Suspended' : 'Subscription Expired');
+
+    final String message = Platform.isIOS
+        ? (suspended
+            ? 'Account status: Suspended\n\nAccess to this account is currently unavailable.'
+            : 'Your free trial or subscription has ended.\nAccess to this account is currently unavailable.')
+        : (suspended
+            ? 'Your account has been suspended. Please contact our support team to resolve this and restore access.'
+            : 'Your free trial or subscription has ended. Upgrade your plan to continue using SaleCentra and access your business data.');
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -159,8 +167,8 @@ class _AccountStatusScreenState extends State<AccountStatusScreen> {
                     ),
                     child: Text(
                       suspended
-                          ? 'Your account status is suspended. Please manage your account using the service\'s standard account management channels.'
-                          : 'Your subscription status is inactive. Please manage your account using the service\'s standard account management channels.',
+                          ? 'Account status: Suspended\n\nAccount and subscription management are available outside the app.'
+                          : 'Account status: Inactive\n\nAccount and subscription management are available outside the app.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: accent,
@@ -197,7 +205,7 @@ class _AccountStatusScreenState extends State<AccountStatusScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.refresh, size: 18),
-                    label: const Text('I\'ve Updated My Plan'),
+                    label: Text(Platform.isIOS ? 'I Have Updated My Account' : 'I\'ve Updated My Plan'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),

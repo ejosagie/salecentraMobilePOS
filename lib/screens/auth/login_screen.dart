@@ -211,6 +211,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                ] else ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'To get started with your business account and more, go to salecentra.com',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
                 Wrap(
                   alignment: WrapAlignment.center,

@@ -31,6 +31,8 @@ class _SalesScreenState extends State<SalesScreen> {
   List<InventoryItem> _inventory = [];
   List<CartItem> _cart = [];
   List<CartItem> _lastCompletedSaleItems = [];
+  String? _lastCompletedReceiptId;
+  DateTime? _lastCompletedSaleDate;
   bool _isLoading = true;
   int _selectedIndex = 1; // 0 = Items, 1 = Cart
 
@@ -97,8 +99,65 @@ class _SalesScreenState extends State<SalesScreen> {
     } else if (newQty > item.inventoryItem.stock) {
       _showError('Not enough stock available');
     } else {
-      setState(() => item.quantity = newQty);
+      setState(() {
+        item.quantity = newQty;
+        final subtotal = item.unitPrice * item.quantity;
+        if (item.discount > subtotal) {
+          item.discount = subtotal;
+        }
+      });
     }
+  }
+
+  Future<void> _showDiscountDialog(int index) async {
+    final item = _cart[index];
+    final controller = TextEditingController(
+      text: item.discount > 0 ? item.discount.toStringAsFixed(2) : '',
+    );
+    final subtotal = item.unitPrice * item.quantity;
+
+    final discount = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Discount for ${item.itemName}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Discount amount',
+            prefixText: currencySymbol,
+            helperText: 'Maximum: $currencySymbol${subtotal.toStringAsFixed(2)}',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 0.0),
+            child: const Text('Remove'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text.trim()) ?? 0.0;
+              if (value < 0 || value > subtotal) {
+                _showError('Discount must be between 0 and $currencySymbol${subtotal.toStringAsFixed(2)}');
+                return;
+              }
+              Navigator.pop(context, value);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (discount == null || !mounted) return;
+    setState(() => item.discount = discount);
   }
 
   double get totalAmount => _cart.fold(0, (sum, item) => sum + item.totalPrice);
@@ -113,9 +172,16 @@ class _SalesScreenState extends State<SalesScreen> {
 
     try {
       final now = DateTime.now();
+      final receiptId = _uuid.v4();
       _lastCompletedSaleItems = _cart
-          .map((item) => CartItem(inventoryItem: item.inventoryItem, quantity: item.quantity))
+          .map((item) => CartItem(
+                inventoryItem: item.inventoryItem,
+                quantity: item.quantity,
+                discount: item.discount,
+              ))
           .toList();
+      _lastCompletedReceiptId = receiptId;
+      _lastCompletedSaleDate = now;
       
       for (final cartItem in _cart) {
         // Record sale
@@ -157,6 +223,8 @@ class _SalesScreenState extends State<SalesScreen> {
   void _showReceiptDialog() {
     final soldItems = _lastCompletedSaleItems;
     final soldTotal = soldItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+    final receiptId = _lastCompletedReceiptId;
+    final saleDate = _lastCompletedSaleDate;
 
     showDialog(
       context: context,
@@ -186,21 +254,14 @@ class _SalesScreenState extends State<SalesScreen> {
         actions: [
           OutlinedButton.icon(
             onPressed: () async {
-              // Generate and share receipt for each item in cart
-              for (var cartItem in soldItems) {
-                final sale = Sale(
-                  id: _uuid.v4(),
-                  userId: _user!.id,
-                  date: DateTime.now(),
-                  item: cartItem.inventoryItem.item,
-                  quantity: cartItem.quantity,
-                  price: cartItem.inventoryItem.sellingPrice,
-                  total: cartItem.inventoryItem.sellingPrice * cartItem.quantity,
-                  enteredByStaffName: widget.staffName,
-                  entryMode: widget.isStaffMode ? 'staff' : 'owner',
-                );
-                await PdfService.generateAndShareReceipt(sale, _user!);
-              }
+              if (_user == null || receiptId == null || saleDate == null || soldItems.isEmpty) return;
+              await PdfService.generateAndShareGroupedReceipt(
+                receiptId: receiptId,
+                date: saleDate,
+                items: soldItems,
+                user: _user!,
+                enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
+              );
             },
             icon: const Icon(Icons.share),
             label: const Text('Share Receipt'),
@@ -211,6 +272,8 @@ class _SalesScreenState extends State<SalesScreen> {
               setState(() {
                 _cart.clear();
                 _lastCompletedSaleItems.clear();
+                _lastCompletedReceiptId = null;
+                _lastCompletedSaleDate = null;
                 _selectedIndex = 1;
               });
             },
@@ -525,6 +588,7 @@ class _SalesScreenState extends State<SalesScreen> {
       itemCount: _cart.length,
       itemBuilder: (context, index) {
         final item = _cart[index];
+        final subtotal = item.unitPrice * item.quantity;
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
@@ -545,6 +609,26 @@ class _SalesScreenState extends State<SalesScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      if (item.discount > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Discount: -$currencySymbol${item.discount.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.success,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _showDiscountDialog(index),
+                        icon: const Icon(Icons.local_offer_outlined, size: 16),
+                        label: Text(item.discount > 0 ? 'Edit Discount' : 'Add Discount'),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         ),
                       ),
                     ],
@@ -578,6 +662,15 @@ class _SalesScreenState extends State<SalesScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    if (item.discount > 0)
+                      Text(
+                        '$currencySymbol${subtotal.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
                     Text(
                       '$currencySymbol${item.totalPrice.toStringAsFixed(2)}',
                       style: const TextStyle(

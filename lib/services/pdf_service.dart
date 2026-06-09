@@ -34,6 +34,8 @@ class PdfService {
 
   static Future<void> generateAndShareReceipt(Sale sale, User user) async {
     await _loadFont();
+    final subtotal = sale.price * sale.quantity;
+    final discount = subtotal - sale.total;
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: _notoFont!,
@@ -105,6 +107,23 @@ class PdfService {
                   pw.Text('Price: ${user.currencySymbol}${sale.price.toStringAsFixed(2)}'),
                 ],
               ),
+              if (discount > 0) ...[
+                pw.SizedBox(height: 10),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Subtotal:'),
+                    pw.Text('${user.currencySymbol}${subtotal.toStringAsFixed(2)}'),
+                  ],
+                ),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Discount:'),
+                    pw.Text('-${user.currencySymbol}${discount.toStringAsFixed(2)}'),
+                  ],
+                ),
+              ],
               pw.SizedBox(height: 10),
               pw.Divider(),
               pw.Row(
@@ -164,6 +183,195 @@ class PdfService {
     );
 
     await _sharePdf(pdf, 'Receipt_${sale.id.substring(0, 8)}');
+  }
+
+  static Future<void> generateAndShareGroupedReceipt({
+    required String receiptId,
+    required DateTime date,
+    required List<CartItem> items,
+    required User user,
+    String? enteredByStaffName,
+  }) async {
+    await _loadFont();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: _notoFont!,
+        bold: _notoFont!,
+        italic: _notoFont!,
+        boldItalic: _notoFont!,
+      ),
+    );
+    final total = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            if (_buildLogo(user) != null) ...[
+              _buildLogo(user)!,
+              pw.SizedBox(height: 10),
+            ],
+            pw.Center(
+              child: pw.Text(
+                'SALECENTRA POS RECEIPT',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('#2563EB'),
+                ),
+              ),
+            ),
+            pw.Center(
+              child: pw.Text(
+                'Smart Sales Made Simple',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColor.fromHex('#64748B'),
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              user.businessName,
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            ),
+            if (user.phoneNumber.isNotEmpty)
+              pw.Text(user.phoneNumber, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
+            if (user.businessAddress.isNotEmpty)
+              pw.Text(user.businessAddress, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
+            pw.SizedBox(height: 16),
+            pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
+            pw.SizedBox(height: 10),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(date)}'),
+                pw.Text('Receipt #: ${receiptId.substring(0, 8).toUpperCase()}'),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColor.fromHex('#CBD5E1'), width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2.6),
+                1: const pw.FlexColumnWidth(1),
+                2: const pw.FlexColumnWidth(1.4),
+                3: const pw.FlexColumnWidth(1.4),
+                4: const pw.FlexColumnWidth(1.6),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('#EFF6FF')),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Discount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                ...items.map(
+                  (item) => pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text(item.itemName),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text(item.quantity.toString()),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('${user.currencySymbol}${item.unitPrice.toStringAsFixed(2)}'),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('${user.currencySymbol}${item.discount.toStringAsFixed(2)}'),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(6),
+                        child: pw.Text('${user.currencySymbol}${item.totalPrice.toStringAsFixed(2)}'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+            pw.Divider(),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'TOTAL',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  '${user.currencySymbol}${total.toStringAsFixed(2)}',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 24),
+            pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Text(
+                'Thank you for your business!',
+                style: pw.TextStyle(fontSize: 12, color: PdfColor.fromHex('#64748B')),
+              ),
+            ),
+            if (enteredByStaffName != null) ...[
+              pw.SizedBox(height: 6),
+              pw.Center(
+                child: pw.Text(
+                  'Sold by: $enteredByStaffName',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#64748B')),
+                ),
+              ),
+            ],
+            pw.SizedBox(height: 16),
+            pw.Center(
+              child: pw.Text(
+                'Generated with SaleCentra',
+                style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
+              ),
+            ),
+            pw.Center(
+              child: pw.Text(
+                'Powered by SaleCentra — Smart Sales, Simple Life',
+                style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    await _sharePdf(pdf, 'Receipt_${receiptId.substring(0, 8)}');
   }
 
   static Future<void> generateAndShareInvoice(Invoice invoice, User user) async {
@@ -299,6 +507,7 @@ class PdfService {
       [XFile(file.path)],
       subject: 'SaleCentra Document',
       text: 'Please find the attached document from SaleCentra.',
+      sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
     );
   }
 }

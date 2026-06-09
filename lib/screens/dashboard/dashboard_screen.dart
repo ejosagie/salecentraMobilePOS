@@ -369,6 +369,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   double _todaySales = 0;
   double _monthSales = 0;
   int _inventoryCount = 0;
+  double _inventoryValue = 0;
   int _todaySalesCount = 0;
   int _customerCount = 0;
   double _receivables = 0;
@@ -461,6 +462,7 @@ class _HomeScreenState extends State<_HomeScreen> {
       _todaySales = todaySales;
       _monthSales = monthSales;
       _inventoryCount = inventory.length;
+      _inventoryValue = inventory.fold(0.0, (sum, item) => sum + (item.stock * item.sellingPrice));
       _todaySalesCount = todaySalesList.length;
       _customerCount = customers.length;
       _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
@@ -784,6 +786,13 @@ class _HomeScreenState extends State<_HomeScreen> {
                   _inventoryCount.toString(),
                   Icons.inventory_2_outlined,
                   AppTheme.info,
+                ),
+                const SizedBox(height: 12),
+                _buildSummaryCard(
+                  'Inventory Value',
+                  '$currencySymbol${_inventoryValue.toStringAsFixed(2)}',
+                  Icons.storefront_outlined,
+                  AppTheme.primaryColor,
                 ),
                 const SizedBox(height: 12),
                 _buildSummaryCard(

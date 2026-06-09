@@ -150,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Account Status'),
-                          content: const Text('Account and subscription management are available outside the app.'),
+                          content: const Text('To manage your business account and subscription status, go to salecentra.com'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),

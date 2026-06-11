@@ -127,15 +127,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Icons.trending_up,
                 AppTheme.success,
               ),
-              if (totalDiscounts > 0) ...[  
-                const SizedBox(height: 12),
-                _buildSummaryCard(
-                  'Total Discounts Given',
-                  '-$currencySymbol${totalDiscounts.toStringAsFixed(2)}',
-                  Icons.discount_outlined,
-                  AppTheme.warning,
-                ),
-              ],
+              const SizedBox(height: 12),
+              _buildSummaryCard(
+                'Total Discounts Given',
+                '-$currencySymbol${totalDiscounts.toStringAsFixed(2)}',
+                Icons.loyalty_outlined,
+                AppTheme.warning,
+              ),
               const SizedBox(height: 12),
               _buildSummaryCard(
                 'Net Sales',

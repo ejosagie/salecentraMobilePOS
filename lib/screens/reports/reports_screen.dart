@@ -68,6 +68,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String get currencySymbol => _user?.currencySymbol ?? '₦';
 
+  double get grossSales => _sales.fold(0, (sum, s) => sum + (s.price * s.quantity));
+  double get totalDiscounts => _sales.fold(0, (sum, s) => sum + s.discount);
   double get totalSales => _sales.fold(0, (sum, s) => sum + s.total);
   double get totalExpenses => _expenses.fold(0, (sum, e) => sum + e.amount);
   double get profit => totalSales - totalExpenses;
@@ -120,10 +122,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const SizedBox(height: 24),
               // Summary cards
               _buildSummaryCard(
-                'Total Sales',
-                '$currencySymbol${totalSales.toStringAsFixed(2)}',
+                'Gross Sales',
+                '$currencySymbol${grossSales.toStringAsFixed(2)}',
                 Icons.trending_up,
                 AppTheme.success,
+              ),
+              if (totalDiscounts > 0) ...[  
+                const SizedBox(height: 12),
+                _buildSummaryCard(
+                  'Total Discounts Given',
+                  '-$currencySymbol${totalDiscounts.toStringAsFixed(2)}',
+                  Icons.discount_outlined,
+                  AppTheme.warning,
+                ),
+              ],
+              const SizedBox(height: 12),
+              _buildSummaryCard(
+                'Net Sales',
+                '$currencySymbol${totalSales.toStringAsFixed(2)}',
+                Icons.point_of_sale,
+                AppTheme.info,
               ),
               const SizedBox(height: 12),
               _buildSummaryCard(
@@ -137,7 +155,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 'Net Profit',
                 '$currencySymbol${profit.toStringAsFixed(2)}',
                 Icons.account_balance_wallet,
-                profit >= 0 ? AppTheme.info : AppTheme.warning,
+                profit >= 0 ? AppTheme.success : AppTheme.error,
               ),
               const SizedBox(height: 24),
               // Recent sales

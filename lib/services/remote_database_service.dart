@@ -98,6 +98,7 @@ class RemoteDatabaseService {
       'item': sale.item,
       'quantity': sale.quantity,
       'price': sale.price,
+      'discount': sale.discount,
       'entered_by_staff_name': sale.enteredByStaffName,
       'entry_mode': sale.entryMode,
     });

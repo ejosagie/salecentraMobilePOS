@@ -192,6 +192,7 @@ class _SalesScreenState extends State<SalesScreen> {
           item: cartItem.itemName,
           quantity: cartItem.quantity,
           price: cartItem.unitPrice,
+          discount: cartItem.discount,
           total: cartItem.totalPrice,
           enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
           entryMode: widget.isStaffMode ? 'staff' : 'owner',

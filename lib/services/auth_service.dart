@@ -89,6 +89,7 @@ class AuthService {
         subscriptionStart: userData['subscription_start'] != null ? DateTime.tryParse(userData['subscription_start']) : null,
         subscriptionEnd: userData['subscription_end'] != null ? DateTime.tryParse(userData['subscription_end']) : null,
         onboardingComplete: userData['onboarding_complete'],
+        logoBase64: userData['logo_base64'],
         salesEntryEnabled: userData['sales_entry_enabled'],
         salesEntryStaffName: userData['sales_entry_staff_name'],
       );

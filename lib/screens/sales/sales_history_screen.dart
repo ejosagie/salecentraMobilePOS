@@ -204,6 +204,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Widget _buildSaleCard(Sale sale) {
+    final hasDiscount = sale.discount > 0;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -243,6 +244,17 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         color: AppTheme.textSecondary,
                       ),
                     ),
+                    if (hasDiscount) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Discount: -$currencySymbol${sale.discount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.warning,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       DateFormat('MMM d, yyyy  h:mm a').format(sale.date),

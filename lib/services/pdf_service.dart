@@ -35,7 +35,8 @@ class PdfService {
   static Future<void> generateAndShareReceipt(Sale sale, User user) async {
     await _loadFont();
     final subtotal = sale.price * sale.quantity;
-    final discount = subtotal - sale.total;
+    final discount = sale.discount;
+    final logo = _buildLogo(user);
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: _notoFont!,
@@ -52,63 +53,72 @@ class PdfService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              if (_buildLogo(user) != null) ...[
-                _buildLogo(user)!,
-                pw.SizedBox(height: 10),
-              ],
+              // Business header — logo + name + contact
+              if (logo != null) ...[logo, pw.SizedBox(height: 10)],
               pw.Center(
                 child: pw.Text(
-                  'SALECENTRA POS RECEIPT',
+                  user.businessName,
+                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              if (user.phoneNumber.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(
+                    user.phoneNumber,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                ),
+              if (user.businessAddress.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(
+                    user.businessAddress,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                ),
+              pw.SizedBox(height: 14),
+              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
+              pw.SizedBox(height: 8),
+              pw.Center(
+                child: pw.Text(
+                  'SALES RECEIPT',
                   style: pw.TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColor.fromHex('#2563EB'),
                   ),
                 ),
               ),
-              pw.Center(
-                child: pw.Text(
-                  'Smart Sales Made Simple',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    color: PdfColor.fromHex('#64748B'),
-                  ),
-                ),
-              ),
-              pw.SizedBox(height: 16),
-              pw.Text(
-                user.businessName,
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-              ),
-              if (user.phoneNumber.isNotEmpty)
-                pw.Text(user.phoneNumber, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-              if (user.businessAddress.isNotEmpty)
-                pw.Text(user.businessAddress, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-              pw.SizedBox(height: 16),
-              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 8),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(sale.date)}'),
-                  pw.Text('Receipt #: ${sale.id.substring(0, 8).toUpperCase()}'),
+                  pw.Text(
+                    'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(sale.date)}',
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                  pw.Text(
+                    'Receipt #: ${sale.id.substring(0, 8).toUpperCase()}',
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
                 ],
               ),
-              pw.SizedBox(height: 20),
-              pw.Text(
-                'Item: ${sale.item}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
+              pw.SizedBox(height: 16),
+              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
               pw.SizedBox(height: 10),
+              pw.Text(
+                sale.item,
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
+              ),
+              pw.SizedBox(height: 8),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Quantity: ${sale.quantity}'),
-                  pw.Text('Price: ${user.currencySymbol}${sale.price.toStringAsFixed(2)}'),
+                  pw.Text('Unit Price: ${user.currencySymbol}${sale.price.toStringAsFixed(2)}'),
                 ],
               ),
               if (discount > 0) ...[
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 8),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -119,8 +129,8 @@ class PdfService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Discount:'),
-                    pw.Text('-${user.currencySymbol}${discount.toStringAsFixed(2)}'),
+                    pw.Text('Discount:', style: pw.TextStyle(color: PdfColor.fromHex('#D97706'))),
+                    pw.Text('-${user.currencySymbol}${discount.toStringAsFixed(2)}', style: pw.TextStyle(color: PdfColor.fromHex('#D97706'))),
                   ],
                 ),
               ],
@@ -129,19 +139,10 @@ class PdfService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'TOTAL',
-                    style: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
+                  pw.Text('TOTAL', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
                     '${user.currencySymbol}${sale.total.toStringAsFixed(2)}',
-                    style: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
+                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
                   ),
                 ],
               ),
@@ -154,7 +155,7 @@ class PdfService {
                   style: pw.TextStyle(fontSize: 12, color: PdfColor.fromHex('#64748B')),
                 ),
               ),
-              if (sale.enteredByStaffName != null) ...[
+              if (sale.enteredByStaffName != null) ...[  
                 pw.SizedBox(height: 6),
                 pw.Center(
                   child: pw.Text(
@@ -166,13 +167,13 @@ class PdfService {
               pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
-                  'Generated with SaleCentra',
-                  style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                  'Powered by SaleCentra — Smart. Simple. Complete.',
+                  style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),
               pw.Center(
                 child: pw.Text(
-                  'Powered by SaleCentra — Smart Sales, Simple Life',
+                  'Visit www.salecentra.com to get started',
                   style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),
@@ -203,51 +204,59 @@ class PdfService {
     );
     final total = items.fold(0.0, (sum, item) => sum + item.totalPrice);
 
+    final logo = _buildLogo(user);
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return [
-            if (_buildLogo(user) != null) ...[
-              _buildLogo(user)!,
-              pw.SizedBox(height: 10),
-            ],
+            // Business header — logo + name + contact
+            if (logo != null) ...[logo, pw.SizedBox(height: 10)],
             pw.Center(
               child: pw.Text(
-                'SALECENTRA POS RECEIPT',
+                user.businessName,
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+              ),
+            ),
+            if (user.phoneNumber.isNotEmpty)
+              pw.Center(
+                child: pw.Text(
+                  user.phoneNumber,
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
+              ),
+            if (user.businessAddress.isNotEmpty)
+              pw.Center(
+                child: pw.Text(
+                  user.businessAddress,
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
+              ),
+            pw.SizedBox(height: 14),
+            pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Text(
+                'SALES RECEIPT',
                 style: pw.TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColor.fromHex('#2563EB'),
                 ),
               ),
             ),
-            pw.Center(
-              child: pw.Text(
-                'Smart Sales Made Simple',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  color: PdfColor.fromHex('#64748B'),
-                ),
-              ),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Text(
-              user.businessName,
-              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-            ),
-            if (user.phoneNumber.isNotEmpty)
-              pw.Text(user.phoneNumber, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-            if (user.businessAddress.isNotEmpty)
-              pw.Text(user.businessAddress, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-            pw.SizedBox(height: 16),
-            pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 8),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Date: ${DateFormat('yyyy-MM-dd HH:mm').format(date)}'),
-                pw.Text('Receipt #: ${receiptId.substring(0, 8).toUpperCase()}'),
+                pw.Text(
+                  'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(date)}',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
+                pw.Text(
+                  'Receipt #: ${receiptId.substring(0, 8).toUpperCase()}',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
               ],
             ),
             pw.SizedBox(height: 20),
@@ -356,13 +365,13 @@ class PdfService {
             pw.SizedBox(height: 16),
             pw.Center(
               child: pw.Text(
-                'Generated with SaleCentra',
-                style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                'Powered by SaleCentra — Smart. Simple. Complete.',
+                style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
               ),
             ),
             pw.Center(
               child: pw.Text(
-                'Powered by SaleCentra — Smart Sales, Simple Life',
+                'Visit www.salecentra.com to get started',
                 style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
               ),
             ),
@@ -385,6 +394,7 @@ class PdfService {
       ),
     );
 
+    final invoiceLogo = _buildLogo(user);
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -392,46 +402,53 @@ class PdfService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              if (_buildLogo(user) != null) ...[
-                _buildLogo(user)!,
-                pw.SizedBox(height: 10),
-              ],
+              // Business header — logo + name + contact
+              if (invoiceLogo != null) ...[invoiceLogo, pw.SizedBox(height: 10)],
               pw.Center(
                 child: pw.Text(
-                  'SALECENTRA INVOICE',
+                  user.businessName,
+                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              if (user.phoneNumber.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(
+                    user.phoneNumber,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                ),
+              if (user.businessAddress.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(
+                    user.businessAddress,
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                ),
+              pw.SizedBox(height: 14),
+              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
+              pw.SizedBox(height: 8),
+              pw.Center(
+                child: pw.Text(
+                  'INVOICE',
                   style: pw.TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColor.fromHex('#2563EB'),
                   ),
                 ),
               ),
-              pw.Center(
-                child: pw.Text(
-                  'Smart Sales Made Simple',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    color: PdfColor.fromHex('#64748B'),
-                  ),
-                ),
-              ),
-              pw.SizedBox(height: 16),
-              pw.Text(
-                user.businessName,
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-              ),
-              if (user.phoneNumber.isNotEmpty)
-                pw.Text(user.phoneNumber, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-              if (user.businessAddress.isNotEmpty)
-                pw.Text(user.businessAddress, style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569'))),
-              pw.SizedBox(height: 16),
-              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 8),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Invoice #: ${invoice.id.substring(0, 8).toUpperCase()}'),
-                  pw.Text('Status: ${invoice.status.toUpperCase()}'),
+                  pw.Text(
+                    'Invoice #: ${invoice.id.substring(0, 8).toUpperCase()}',
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
+                  pw.Text(
+                    'Status: ${invoice.status.toUpperCase()}',
+                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 10),
@@ -479,13 +496,13 @@ class PdfService {
               pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
-                  'Generated with SaleCentra',
-                  style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                  'Powered by SaleCentra — Smart. Simple. Complete.',
+                  style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),
               pw.Center(
                 child: pw.Text(
-                  'Powered by SaleCentra — Smart Sales, Simple Life',
+                  'Visit www.salecentra.com to get started',
                   style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),

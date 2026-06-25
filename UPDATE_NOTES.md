@@ -2,7 +2,7 @@
 
 ---
 
-## ✅ DONE — v1.0.12 (Build 15)
+## ✅ DONE — v1.0.14 (Build 17)
 
 ### Customer Info on Sales & Receipts
 - Added optional Customer Name, Phone, and Address fields to the sales entry screen (owner and staff).

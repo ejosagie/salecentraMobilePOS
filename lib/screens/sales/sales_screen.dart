@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/pdf_service.dart';
+import '../../models/customer.dart';
 import '../../models/inventory.dart';
 import '../../models/sale.dart';
 import '../../models/user.dart';
@@ -36,10 +37,29 @@ class _SalesScreenState extends State<SalesScreen> {
   bool _isLoading = true;
   int _selectedIndex = 1; // 0 = Items, 1 = Cart
 
+  // Customer fields
+  final _customerNameController = TextEditingController();
+  final _customerPhoneController = TextEditingController();
+  final _customerAddressController = TextEditingController();
+  final _customerEmailController = TextEditingController();
+  List<Customer> _customerSearchResults = [];
+  bool _isSearchingCustomers = false;
+  bool _showCustomerFields = false;
+  Customer? _selectedCustomer;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _customerNameController.dispose();
+    _customerPhoneController.dispose();
+    _customerAddressController.dispose();
+    _customerEmailController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -107,6 +127,55 @@ class _SalesScreenState extends State<SalesScreen> {
         }
       });
     }
+  }
+
+  Future<void> _searchCustomers(String term) async {
+    if (term.isEmpty || _user == null) {
+      setState(() {
+        _customerSearchResults = [];
+        _isSearchingCustomers = false;
+      });
+      return;
+    }
+
+    setState(() => _isSearchingCustomers = true);
+    try {
+      final results = await _dbService.searchCustomers(_user!.id, term);
+      if (mounted) {
+        setState(() {
+          _customerSearchResults = results;
+          _isSearchingCustomers = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSearchingCustomers = false);
+      }
+    }
+  }
+
+  void _selectCustomer(Customer customer) {
+    setState(() {
+      _selectedCustomer = customer;
+      _customerNameController.text = customer.name;
+      _customerPhoneController.text = customer.phone ?? '';
+      _customerAddressController.text = customer.address ?? '';
+      _customerEmailController.text = customer.email ?? '';
+      _customerSearchResults = [];
+      _showCustomerFields = true;
+    });
+  }
+
+  void _clearCustomer() {
+    setState(() {
+      _selectedCustomer = null;
+      _customerNameController.clear();
+      _customerPhoneController.clear();
+      _customerAddressController.clear();
+      _customerEmailController.clear();
+      _customerSearchResults = [];
+      _showCustomerFields = false;
+    });
   }
 
   Future<void> _showDiscountDialog(int index) async {
@@ -183,6 +252,10 @@ class _SalesScreenState extends State<SalesScreen> {
       _lastCompletedReceiptId = receiptId;
       _lastCompletedSaleDate = now;
       
+      final customerName = _customerNameController.text.trim();
+      final customerPhone = _customerPhoneController.text.trim();
+      final customerAddress = _customerAddressController.text.trim();
+      
       for (final cartItem in _cart) {
         // Record sale
         final sale = Sale(
@@ -196,6 +269,9 @@ class _SalesScreenState extends State<SalesScreen> {
           total: cartItem.totalPrice,
           enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
           entryMode: widget.isStaffMode ? 'staff' : 'owner',
+          customerName: customerName.isNotEmpty ? customerName : null,
+          customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
+          customerAddress: customerAddress.isNotEmpty ? customerAddress : null,
         );
 
         await _dbService.recordSale(sale);
@@ -206,7 +282,11 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       if (mounted) {
-        _showReceiptDialog();
+        _showReceiptDialog(
+          customerName: customerName.isNotEmpty ? customerName : null,
+          customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
+          customerAddress: customerAddress.isNotEmpty ? customerAddress : null,
+        );
       }
     } catch (e) {
       _showError('Error completing sale: $e');
@@ -215,13 +295,18 @@ class _SalesScreenState extends State<SalesScreen> {
         setState(() {
           _cart.clear();
           _isLoading = false;
+          _clearCustomer();
         });
         _loadData();
       }
     }
   }
 
-  void _showReceiptDialog() {
+  void _showReceiptDialog({
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
+  }) {
     final soldItems = _lastCompletedSaleItems;
     final soldTotal = soldItems.fold(0.0, (sum, item) => sum + item.totalPrice);
     final receiptId = _lastCompletedReceiptId;
@@ -262,6 +347,9 @@ class _SalesScreenState extends State<SalesScreen> {
                 items: soldItems,
                 user: _user!,
                 enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerAddress: customerAddress,
               );
             },
             icon: const Icon(Icons.share),
@@ -310,9 +398,9 @@ class _SalesScreenState extends State<SalesScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: AppTheme.info.withValues(alpha: 0.1),
-            child: Row(
-              children: [
+              color: AppTheme.info.withValues(alpha: 0.1),
+              child: Row(
+                children: [
                 const Icon(Icons.badge_outlined, size: 16, color: AppTheme.info),
                 const SizedBox(width: 8),
                 Text(
@@ -560,6 +648,104 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
+  Widget _buildCustomerSection() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Customer Details (Optional)',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (_showCustomerFields || _customerNameController.text.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: _clearCustomer,
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Clear'),
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  )
+                else
+                  TextButton.icon(
+                    onPressed: () => setState(() => _showCustomerFields = true),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  ),
+              ],
+            ),
+            if (_showCustomerFields || _customerNameController.text.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customerNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Customer Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                  hintText: 'Search or enter name',
+                ),
+                onChanged: (value) {
+                  if (value.length >= 2) {
+                    _searchCustomers(value);
+                  } else {
+                    setState(() => _customerSearchResults = []);
+                  }
+                },
+              ),
+              if (_isSearchingCustomers)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: LinearProgressIndicator(),
+                ),
+              if (_customerSearchResults.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: _customerSearchResults.map((customer) {
+                      return ListTile(
+                        dense: true,
+                        title: Text(customer.name),
+                        subtitle: customer.phone != null ? Text(customer.phone!) : null,
+                        onTap: () => _selectCustomer(customer),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customerPhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customerAddressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address (Optional)',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCartView() {
     if (_cart.isEmpty) {
       return Center(
@@ -586,9 +772,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _cart.length,
+      itemCount: _cart.length + 1,
       itemBuilder: (context, index) {
-        final item = _cart[index];
+        if (index == 0) {
+          return _buildCustomerSection();
+        }
+        final item = _cart[index - 1];
         final subtotal = item.unitPrice * item.quantity;
         return Card(
           margin: const EdgeInsets.only(bottom: 12),

@@ -101,6 +101,10 @@ class RemoteDatabaseService {
       'discount': sale.discount,
       'entered_by_staff_name': sale.enteredByStaffName,
       'entry_mode': sale.entryMode,
+      'customer_name': sale.customerName,
+      'customer_phone': sale.customerPhone,
+      'customer_address': sale.customerAddress,
+      'customer_email': null,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to record sale');
@@ -117,6 +121,19 @@ class RemoteDatabaseService {
           .toList();
     }
     throw Exception(response['error'] ?? 'Failed to fetch customers');
+  }
+
+  Future<List<Customer>> searchCustomers(String userId, String term) async {
+    final response = await ApiService.get('/customers/search', params: {
+      'user_id': userId,
+      'term': term,
+    });
+    if (response['success']) {
+      return (response['customers'] as List)
+          .map((customer) => Customer.fromMap(customer))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to search customers');
   }
 
   Future<void> addCustomer(Customer customer) async {

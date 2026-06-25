@@ -11,6 +11,9 @@ class Sale {
   final double total;
   final String? enteredByStaffName;
   final String? entryMode;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerAddress;
 
   Sale({
     required this.id,
@@ -23,6 +26,9 @@ class Sale {
     required this.total,
     this.enteredByStaffName,
     this.entryMode = 'owner',
+    this.customerName,
+    this.customerPhone,
+    this.customerAddress,
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +44,9 @@ class Sale {
       'entered_by_staff_name': enteredByStaffName,
       'entered_by_staff_name_normalized': enteredByStaffName?.toLowerCase().trim(),
       'entry_mode': entryMode,
+      'customer_name': customerName,
+      'customer_phone': customerPhone,
+      'customer_address': customerAddress,
     };
   }
 
@@ -53,6 +62,9 @@ class Sale {
       total: map['total'].toDouble(),
       enteredByStaffName: map['entered_by_staff_name'],
       entryMode: map['entry_mode'] ?? 'owner',
+      customerName: map['customer_name'],
+      customerPhone: map['customer_phone'],
+      customerAddress: map['customer_address'],
     );
   }
 }

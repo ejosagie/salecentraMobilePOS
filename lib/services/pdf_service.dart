@@ -192,6 +192,9 @@ class PdfService {
     required List<CartItem> items,
     required User user,
     String? enteredByStaffName,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
   }) async {
     await _loadFont();
     final pdf = pw.Document(
@@ -259,6 +262,32 @@ class PdfService {
                 ),
               ],
             ),
+            if (enteredByStaffName != null && enteredByStaffName.isNotEmpty) ...[
+              pw.SizedBox(height: 6),
+              pw.Text(
+                'Staff: $enteredByStaffName',
+                style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+              ),
+            ],
+            if (customerName != null && customerName.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 0.5),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Customer: $customerName',
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+              ),
+              if (customerPhone != null && customerPhone.isNotEmpty)
+                pw.Text(
+                  'Phone: $customerPhone',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
+              if (customerAddress != null && customerAddress.isNotEmpty)
+                pw.Text(
+                  'Address: $customerAddress',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+                ),
+            ],
             pw.SizedBox(height: 20),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColor.fromHex('#CBD5E1'), width: 0.5),

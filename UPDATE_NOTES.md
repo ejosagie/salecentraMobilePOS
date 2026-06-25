@@ -14,10 +14,10 @@
 - Files updated: `lib/screens/sales/sales_screen.dart`, `lib/services/pdf_service.dart`, `lib/models/sale.dart`, `lib/services/remote_database_service.dart`
 
 ### Backend API Updates
-- `POST /api/sales` now accepts `customer_name`, `customer_phone`, `customer_address`, and `customer_email`.
+- `POST /api/sales` now accepts `customer_name`, `customer_phone`, and `customer_address`.
 - New customers are automatically saved to the `customers` table during sale recording.
 - Added `GET /api/customers/search` endpoint for customer name/phone search.
-- Files updated: `api/app.py`
+- Files updated: `api/app.py`, `modules/database.py`
 
 ---
 

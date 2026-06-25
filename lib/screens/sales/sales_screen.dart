@@ -41,7 +41,6 @@ class _SalesScreenState extends State<SalesScreen> {
   final _customerNameController = TextEditingController();
   final _customerPhoneController = TextEditingController();
   final _customerAddressController = TextEditingController();
-  final _customerEmailController = TextEditingController();
   List<Customer> _customerSearchResults = [];
   bool _isSearchingCustomers = false;
   bool _showCustomerFields = false;
@@ -58,7 +57,6 @@ class _SalesScreenState extends State<SalesScreen> {
     _customerNameController.dispose();
     _customerPhoneController.dispose();
     _customerAddressController.dispose();
-    _customerEmailController.dispose();
     super.dispose();
   }
 
@@ -160,7 +158,6 @@ class _SalesScreenState extends State<SalesScreen> {
       _customerNameController.text = customer.name;
       _customerPhoneController.text = customer.phone ?? '';
       _customerAddressController.text = customer.address ?? '';
-      _customerEmailController.text = customer.email ?? '';
       _customerSearchResults = [];
       _showCustomerFields = true;
     });
@@ -172,7 +169,6 @@ class _SalesScreenState extends State<SalesScreen> {
       _customerNameController.clear();
       _customerPhoneController.clear();
       _customerAddressController.clear();
-      _customerEmailController.clear();
       _customerSearchResults = [];
       _showCustomerFields = false;
     });

@@ -104,7 +104,6 @@ class RemoteDatabaseService {
       'customer_name': sale.customerName,
       'customer_phone': sale.customerPhone,
       'customer_address': sale.customerAddress,
-      'customer_email': null,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to record sale');

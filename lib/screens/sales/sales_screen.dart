@@ -773,7 +773,8 @@ class _SalesScreenState extends State<SalesScreen> {
         if (index == 0) {
           return _buildCustomerSection();
         }
-        final item = _cart[index - 1];
+        final cartIndex = index - 1;
+        final item = _cart[cartIndex];
         final subtotal = item.unitPrice * item.quantity;
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -809,7 +810,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       ],
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
-                        onPressed: () => _showDiscountDialog(index),
+                        onPressed: () => _showDiscountDialog(cartIndex),
                         icon: const Icon(Icons.local_offer_outlined, size: 16),
                         label: Text(item.discount > 0 ? 'Edit Discount' : 'Add Discount'),
                         style: OutlinedButton.styleFrom(
@@ -831,7 +832,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.remove, size: 18),
-                        onPressed: () => _updateQuantity(index, -1),
+                        onPressed: () => _updateQuantity(cartIndex, -1),
                       ),
                       Text(
                         '${item.quantity}',
@@ -839,7 +840,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.add, size: 18),
-                        onPressed: () => _updateQuantity(index, 1),
+                        onPressed: () => _updateQuantity(cartIndex, 1),
                       ),
                     ],
                   ),
@@ -866,7 +867,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: AppTheme.error, size: 20),
-                      onPressed: () => _removeFromCart(index),
+                      onPressed: () => _removeFromCart(cartIndex),
                     ),
                   ],
                 ),

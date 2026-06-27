@@ -254,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'SaleCentra v1.0.18',
+                  'SaleCentra v1.0.19',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textMuted,
                   ),

@@ -1077,7 +1077,7 @@ class _ShopOrdersTabState extends State<_ShopOrdersTab> {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ['All', 'Pending', 'Confirmed', 'Completed', 'Cancelled'].map((filter) {
+              children: ['All', 'Pending', 'Completed', 'Cancelled'].map((filter) {
                 final isSelected = _filter == filter;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -1103,7 +1103,6 @@ class _ShopOrdersTabState extends State<_ShopOrdersTab> {
                   itemCount: _filteredOrders.length,
                   itemBuilder: (context, index) => _OrderCard(
                     order: _filteredOrders[index],
-                    onConfirm: () => _updateStatus(_filteredOrders[index], 'confirmed'),
                     onComplete: () => _updateStatus(_filteredOrders[index], 'completed'),
                     onCancel: () => _updateStatus(_filteredOrders[index], 'cancelled'),
                   ),
@@ -1120,7 +1119,6 @@ class _ShopOrdersTabState extends State<_ShopOrdersTab> {
         final statusMessages = {
           'completed': 'Order completed',
           'cancelled': 'Order cancelled',
-          'confirmed': 'Order confirmed',
         };
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(statusMessages[status] ?? 'Order updated'), backgroundColor: AppTheme.success),
@@ -1139,11 +1137,10 @@ class _ShopOrdersTabState extends State<_ShopOrdersTab> {
 
 class _OrderCard extends StatelessWidget {
   final ShopOrder order;
-  final VoidCallback onConfirm;
   final VoidCallback onComplete;
   final VoidCallback onCancel;
 
-  const _OrderCard({required this.order, required this.onConfirm, required this.onComplete, required this.onCancel});
+  const _OrderCard({required this.order, required this.onComplete, required this.onCancel});
 
   Color get _statusColor {
     switch (order.status) {
@@ -1151,8 +1148,6 @@ class _OrderCard extends StatelessWidget {
         return AppTheme.success;
       case 'cancelled':
         return AppTheme.error;
-      case 'confirmed':
-        return AppTheme.info;
       default:
         return AppTheme.warning;
     }
@@ -1205,21 +1200,10 @@ class _OrderCard extends StatelessWidget {
                 Text(order.paymentMethod, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               ],
             ),
-            if (order.status == 'pending' || order.status == 'confirmed') ...[
+            if (order.status == 'pending') ...[
               const SizedBox(height: 12),
               Row(
                 children: [
-                  if (order.status == 'pending') ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onConfirm,
-                        icon: const Icon(Icons.check_circle_outline, size: 18),
-                        label: const Text('Confirm'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.info, foregroundColor: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: onComplete,

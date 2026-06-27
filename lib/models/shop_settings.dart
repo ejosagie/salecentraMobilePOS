@@ -16,6 +16,8 @@ class ShopSettings {
   final bool isActive;
   final bool shopEnabled;
   final String subscriptionStatus;
+  final String? subscriptionStartDate;
+  final String? subscriptionEndDate;
   final int productLimit;
 
   ShopSettings({
@@ -36,6 +38,8 @@ class ShopSettings {
     this.isActive = false,
     this.shopEnabled = false,
     this.subscriptionStatus = 'inactive',
+    this.subscriptionStartDate,
+    this.subscriptionEndDate,
     this.productLimit = 10,
   });
 
@@ -74,6 +78,8 @@ class ShopSettings {
       isActive: isActive,
       shopEnabled: shopEnabled,
       subscriptionStatus: (map['shop_subscription_status'] as String?) ?? 'inactive',
+      subscriptionStartDate: map['shop_subscription_start_date'] as String?,
+      subscriptionEndDate: map['shop_subscription_end_date'] as String?,
       productLimit: productLimit,
     );
   }
@@ -115,6 +121,8 @@ class ShopSettings {
     bool? isActive,
     bool? shopEnabled,
     String? subscriptionStatus,
+    String? subscriptionStartDate,
+    String? subscriptionEndDate,
     int? productLimit,
   }) {
     return ShopSettings(
@@ -135,6 +143,8 @@ class ShopSettings {
       isActive: isActive ?? this.isActive,
       shopEnabled: shopEnabled ?? this.shopEnabled,
       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      subscriptionStartDate: subscriptionStartDate ?? this.subscriptionStartDate,
+      subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
       productLimit: productLimit ?? this.productLimit,
     );
   }

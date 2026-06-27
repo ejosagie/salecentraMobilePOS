@@ -154,7 +154,7 @@ class _PremiumStaffSettingsScreenState
         builder: (context) => AlertDialog(
           title: const Text('Premium Staff Add-on'),
           content: const Text(
-            'To subscribe to the Premium Staff Add-on and manage your account, go to salecentra.com',
+            'To manage your Premium Staff Add-on and account status, go to salecentra.com',
           ),
           actions: [
             TextButton(

@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/user.dart';
 import '../../models/shop_settings.dart';
@@ -919,8 +920,17 @@ class _ShopSubscriptionTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (status == 'active')
-                    const Text('Your Shop Addon is active. You have unlimited products for your online storefront.')
+                  if (status == 'active') ...[
+                    const Text('Your Shop Addon is active. You have unlimited products for your online storefront.'),
+                    if (settings.subscriptionEndDate != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Valid until ${_formatDate(settings.subscriptionEndDate!)}',
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ] else if (status == 'pending')
+                    const Text('Your Shop Addon request is pending admin approval. Your shop will be upgraded once the admin confirms your payment (usually within 48 hours).')
                   else
                     const Text('You are on the Free Shop plan (10 products). Subscribe for unlimited products for your business online storefront.'),
                 ],
@@ -946,8 +956,9 @@ class _ShopSubscriptionTab extends StatelessWidget {
 
           // Upgrade section
           if (status != 'active') ...[
-            const Text('Upgrade Your Shop', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            if (!isIOS)
+              const Text('Upgrade Your Shop', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            if (!isIOS) const SizedBox(height: 12),
             if (isIOS) ...[
               Container(
                 padding: const EdgeInsets.all(16),
@@ -960,7 +971,7 @@ class _ShopSubscriptionTab extends StatelessWidget {
                     const Icon(Icons.info_outline, color: AppTheme.info),
                     const SizedBox(height: 8),
                     const Text(
-                      'To manage your subscription and account status, go to:',
+                      'To manage your shop add-on and account status, go to:',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
@@ -1017,6 +1028,15 @@ class _ShopSubscriptionTab extends StatelessWidget {
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  String _formatDate(String isoDate) {
+    try {
+      final dt = DateTime.parse(isoDate);
+      return DateFormat('dd MMM yyyy').format(dt);
+    } catch (_) {
+      return isoDate.substring(0, 10);
+    }
   }
 }
 

@@ -6,17 +6,20 @@ import '../../services/pdf_service.dart';
 import '../../models/customer.dart';
 import '../../models/inventory.dart';
 import '../../models/sale.dart';
+import '../../models/shop_order.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
 
 class SalesScreen extends StatefulWidget {
   final bool isStaffMode;
   final String? staffName;
+  final bool isDefaultStaff;
 
   const SalesScreen({
     super.key,
     this.isStaffMode = false,
     this.staffName,
+    this.isDefaultStaff = false,
   });
 
   @override
@@ -35,7 +38,9 @@ class _SalesScreenState extends State<SalesScreen> {
   String? _lastCompletedReceiptId;
   DateTime? _lastCompletedSaleDate;
   bool _isLoading = true;
-  int _selectedIndex = 1; // 0 = Items, 1 = Cart
+  int _selectedIndex = 1; // 0 = Items, 1 = Cart, 2 = Orders (staff only)
+  List<ShopOrder> _pendingOrders = [];
+  bool _isLoadingOrders = false;
 
   // Customer fields
   final _customerNameController = TextEditingController();
@@ -71,6 +76,76 @@ class _SalesScreenState extends State<SalesScreen> {
       _inventory = inventory.where((i) => i.stock > 0).toList();
       _isLoading = false;
     });
+
+    if (widget.isStaffMode && widget.isDefaultStaff) {
+      _loadPendingOrders();
+    }
+  }
+
+  Future<void> _loadPendingOrders() async {
+    if (_user == null) return;
+    setState(() => _isLoadingOrders = true);
+    try {
+      final orders = await _dbService.getShopOrders(_user!.id, status: 'pending');
+      if (mounted) setState(() => _pendingOrders = orders);
+    } catch (_) {
+      // Silently fail — orders are a secondary feature for staff
+    } finally {
+      if (mounted) setState(() => _isLoadingOrders = false);
+    }
+  }
+
+  Future<void> _completeOrder(ShopOrder order) async {
+    if (_user == null) return;
+    try {
+      await _dbService.updateOrderStatus(_user!.id, order.id, 'completed');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order completed and recorded as sales.'), backgroundColor: AppTheme.success),
+        );
+        _loadPendingOrders();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectOrder(ShopOrder order) async {
+    if (_user == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Order'),
+        content: Text('Reject order from ${order.customerName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reject', style: TextStyle(color: AppTheme.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _dbService.updateOrderStatus(_user!.id, order.id, 'cancelled');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order rejected.'), backgroundColor: AppTheme.warning),
+        );
+        _loadPendingOrders();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
   }
 
   String get currencySymbol => _user?.currencySymbol ?? '₦';
@@ -425,6 +500,10 @@ class _SalesScreenState extends State<SalesScreen> {
               Expanded(
                 child: _buildTabButton('Cart (${_cart.length})', 1, Icons.shopping_cart_outlined),
               ),
+              if (widget.isStaffMode && widget.isDefaultStaff)
+                Expanded(
+                  child: _buildTabButton('Orders (${_pendingOrders.length})', 2, Icons.receipt_long_outlined),
+                ),
             ],
           ),
         ),
@@ -432,7 +511,9 @@ class _SalesScreenState extends State<SalesScreen> {
         Expanded(
           child: _selectedIndex == 0
               ? _buildItemsView()
-              : _buildCartView(),
+              : _selectedIndex == 1
+                  ? _buildCartView()
+                  : _buildOrdersView(),
         ),
         if (_selectedIndex == 0 && _cart.isNotEmpty)
           Container(
@@ -876,6 +957,129 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildOrdersView() {
+    if (_isLoadingOrders) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_pendingOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.receipt_long_outlined, size: 64, color: AppTheme.textMuted),
+            const SizedBox(height: 16),
+            const Text('No pending online shop orders'),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _loadPendingOrders,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPendingOrders,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _pendingOrders.length,
+        itemBuilder: (context, index) {
+          final order = _pendingOrders[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Order #${order.id.substring(0, 8)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          order.status.toUpperCase(),
+                          style: const TextStyle(fontSize: 10, color: AppTheme.warning, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${order.customerName} · ${order.customerPhone}',
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  if (order.customerAddress != null && order.customerAddress!.isNotEmpty)
+                    Text(order.customerAddress!,
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  const Divider(),
+                  ...order.items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${item.name} x${item.quantity}'),
+                        Text('${order.currency} ${item.price.toStringAsFixed(2)}'),
+                      ],
+                    ),
+                  )),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text('${order.currency} ${order.totalAmount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  if (order.notes != null && order.notes!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('Notes: ${order.notes}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _completeOrder(order),
+                          icon: const Icon(Icons.check_circle_outline, size: 18),
+                          label: const Text('Complete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.success,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _rejectOrder(order),
+                          icon: const Icon(Icons.cancel_outlined, size: 18),
+                          label: const Text('Reject'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

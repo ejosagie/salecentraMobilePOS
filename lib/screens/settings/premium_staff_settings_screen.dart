@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/user.dart';
 import '../../models/premium_staff.dart';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';

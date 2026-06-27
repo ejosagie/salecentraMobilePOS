@@ -35,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   User? _user;
   bool _isStaff = false;
   String? _staffName;
+  String _staffType = 'default';
   int _selectedIndex = 0;
   bool _isLoading = true;
 
@@ -62,11 +63,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final user = await _authService.getCurrentUser();
     final isStaff = await _authService.isStaffLogin();
     final staffName = await _authService.getStaffName();
+    final staffType = await _authService.getStaffType();
     
     setState(() {
       _user = user;
       _isStaff = isStaff;
       _staffName = staffName;
+      _staffType = staffType;
       _isLoading = false;
     });
   }
@@ -102,7 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-        body: SalesScreen(isStaffMode: true, staffName: _staffName),
+        body: SalesScreen(isStaffMode: true, staffName: _staffName, isDefaultStaff: _staffType == 'default'),
       );
     }
 

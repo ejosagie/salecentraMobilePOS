@@ -8,6 +8,7 @@ class AuthService {
   static const String _currentUserKey = 'current_user';
   static const String _isStaffLoginKey = 'is_staff_login';
   static const String _staffNameKey = 'staff_name';
+  static const String _staffTypeKey = 'staff_type';
   static const String _lastActivityKey = 'last_activity';
   static const int _sessionTimeoutMinutes = 30;
 
@@ -128,7 +129,7 @@ class AuthService {
         salesEntryStaffName: userData['staff_name'],
       );
 
-      await _saveCurrentUser(user, isStaffLogin: true, staffName: staffName);
+      await _saveCurrentUser(user, isStaffLogin: true, staffName: staffName, staffType: userData['staff_type'] ?? 'default');
       await updateLastActivity();
       return {
         'user': user,
@@ -138,17 +139,20 @@ class AuthService {
     throw Exception(response['error'] ?? 'Staff login failed');
   }
 
-  Future<void> saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName}) async {
+  Future<void> saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName, String? staffType}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_currentUserKey, jsonEncode(user.toMap()));
     await prefs.setBool(_isStaffLoginKey, isStaffLogin);
     if (staffName != null) {
       await prefs.setString(_staffNameKey, staffName);
     }
+    if (staffType != null) {
+      await prefs.setString(_staffTypeKey, staffType);
+    }
   }
 
-  Future<void> _saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName}) async {
-    await saveCurrentUser(user, isStaffLogin: isStaffLogin, staffName: staffName);
+  Future<void> _saveCurrentUser(User user, {bool isStaffLogin = false, String? staffName, String? staffType}) async {
+    await saveCurrentUser(user, isStaffLogin: isStaffLogin, staffName: staffName, staffType: staffType);
   }
 
   Future<User?> getCurrentUser() async {
@@ -173,11 +177,17 @@ class AuthService {
     return prefs.getString(_staffNameKey);
   }
 
+  Future<String> getStaffType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_staffTypeKey) ?? 'default';
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentUserKey);
     await prefs.remove(_isStaffLoginKey);
     await prefs.remove(_staffNameKey);
+    await prefs.remove(_staffTypeKey);
   }
 
   Future<bool> isLoggedIn() async {

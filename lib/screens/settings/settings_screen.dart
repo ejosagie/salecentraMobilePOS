@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import 'business_settings_screen.dart';
 import 'staff_settings_screen.dart';
+import 'premium_staff_settings_screen.dart';
 import '../notifications/notifications_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -188,6 +189,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             _buildMenuItem(
               context,
+              icon: Icons.groups_2_outlined,
+              title: 'Premium Staff Settings',
+              subtitle: 'Manage additional staff entry access',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PremiumStaffSettingsScreen()),
+                );
+              },
+            ),
+            _buildMenuItem(
+              context,
               icon: Icons.notifications_outlined,
               title: 'Notifications',
               onTap: () {
@@ -241,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'SaleCentra v1.0.8',
+                  'SaleCentra v1.0.16',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textMuted,
                   ),

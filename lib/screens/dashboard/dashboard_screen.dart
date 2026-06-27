@@ -19,6 +19,8 @@ import '../expenses/expenses_screen.dart';
 import '../sales/sales_history_screen.dart';
 import '../forecast/forecast_screen.dart';
 import '../price_pilot/price_pilot_screen.dart';
+import '../shop/shop_screen.dart';
+import '../../models/announcement.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -284,6 +286,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
                       _buildMenuGridItem(
+                        icon: Icons.storefront_outlined,
+                        label: 'My Online Shop',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ShopScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
                         icon: Icons.settings_outlined,
                         label: 'Settings',
                         color: AppTheme.primaryColor,
@@ -382,6 +395,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   double _conversionAmount = 0;
   int _unreadNotificationCount = 0;
   bool _isLoading = true;
+  List<Announcement> _announcements = [];
 
   @override
   void initState() {
@@ -457,8 +471,14 @@ class _HomeScreenState extends State<_HomeScreen> {
     final todaySalesList = await _dbService.getSales(user.id, startDate: today);
     final notifications = await _dbService.getNotifications(user.id);
 
+    List<Announcement> announcements = [];
+    try {
+      announcements = await _dbService.getAnnouncements(user.id);
+    } catch (_) {}
+
     setState(() {
       _user = user;
+      _announcements = announcements;
       _todaySales = todaySales;
       _monthSales = monthSales;
       _inventoryCount = inventory.length;
@@ -755,6 +775,11 @@ class _HomeScreenState extends State<_HomeScreen> {
               delegate: SliverChildListDelegate([
                 // Subscription status banner
                 _buildSubscriptionBanner(),
+                // Announcements banner
+                if (_announcements.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildAnnouncementBanner(),
+                ],
                 const SizedBox(height: 16),
                 // Today's sales card
                 _buildSalesCard(),
@@ -1007,6 +1032,82 @@ class _HomeScreenState extends State<_HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildAnnouncementBanner() {
+    if (_announcements.isEmpty || _user == null) return const SizedBox.shrink();
+
+    // Show only the most recent active announcement (API returns ORDER BY created_at DESC)
+    final ann = _announcements.first;
+    Color bannerColor;
+    IconData bannerIcon;
+    switch (ann.priority) {
+      case 'warning':
+        bannerColor = AppTheme.warning;
+        bannerIcon = Icons.warning_amber_rounded;
+        break;
+      case 'success':
+        bannerColor = AppTheme.success;
+        bannerIcon = Icons.check_circle_outline;
+        break;
+      case 'error':
+        bannerColor = AppTheme.error;
+        bannerIcon = Icons.error_outline;
+        break;
+      default:
+        bannerColor = AppTheme.info;
+        bannerIcon = Icons.info_outline;
+    }
+
+    return Card(
+      color: bannerColor.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(bannerIcon, color: bannerColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    ann.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: bannerColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => _dismissAnnouncement(ann.id),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              ann.message,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _dismissAnnouncement(int announcementId) async {
+    try {
+      await _dbService.dismissAnnouncement(_user!.id, announcementId);
+      setState(() {
+        _announcements.removeWhere((a) => a.id == announcementId);
+      });
+    } catch (_) {}
   }
 
   Future<void> _openUpgradeLink() async {

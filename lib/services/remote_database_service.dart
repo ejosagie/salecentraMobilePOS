@@ -5,6 +5,11 @@ import '../models/expense.dart';
 import '../models/debt.dart';
 import '../models/invoice.dart';
 import '../models/notification.dart';
+import '../models/shop_settings.dart';
+import '../models/shop_product.dart';
+import '../models/shop_order.dart';
+import '../models/announcement.dart';
+import '../models/premium_staff.dart';
 import 'api_service.dart';
 
 class RemoteDatabaseService {
@@ -339,5 +344,140 @@ class RemoteDatabaseService {
           .toList();
     }
     throw Exception(response['error'] ?? 'Failed to fetch invoice items');
+  }
+
+  // ==================== SHOP ====================
+
+  Future<ShopSettings> getShopSettings(String userId) async {
+    final response = await ApiService.get('/storefront/admin/shop', params: {'user_id': userId});
+    if (response['success'] == true) {
+      return ShopSettings.fromMap(response);
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch shop settings');
+  }
+
+  Future<void> saveShopSettings(String userId, ShopSettings settings) async {
+    final data = settings.toMap();
+    data['user_id'] = userId;
+    final response = await ApiService.post('/storefront/admin/shop', data);
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to save shop settings');
+    }
+  }
+
+  Future<List<ShopProduct>> getShopProducts(String userId) async {
+    final response = await ApiService.get('/storefront/admin/products', params: {'user_id': userId});
+    if (response['success'] == true) {
+      return (response['products'] as List)
+          .map((p) => ShopProduct.fromMap(p as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch shop products');
+  }
+
+  Future<void> addShopProduct(String userId, Map<String, dynamic> productData) async {
+    productData['user_id'] = userId;
+    final response = await ApiService.post('/storefront/admin/products', productData);
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to add product');
+    }
+  }
+
+  Future<void> updateShopProduct(String userId, String productId, Map<String, dynamic> data) async {
+    data['user_id'] = userId;
+    final response = await ApiService.put('/storefront/admin/products/$productId', data);
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to update product');
+    }
+  }
+
+  Future<void> deleteShopProduct(String userId, String productId) async {
+    final response = await ApiService.delete('/storefront/admin/products/$productId?user_id=$userId');
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to delete product');
+    }
+  }
+
+  Future<List<ShopOrder>> getShopOrders(String userId, {String? status}) async {
+    final params = {'user_id': userId};
+    if (status != null && status != 'All') {
+      params['status'] = status.toLowerCase();
+    }
+    final response = await ApiService.get('/storefront/admin/orders', params: params);
+    if (response['success'] == true) {
+      return (response['orders'] as List)
+          .map((o) => ShopOrder.fromMap(o as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch shop orders');
+  }
+
+  Future<void> updateOrderStatus(String userId, String orderId, String status) async {
+    final response = await ApiService.put('/storefront/admin/orders/$orderId/status', {
+      'user_id': userId,
+      'status': status,
+    });
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to update order status');
+    }
+  }
+
+  // ==================== PREMIUM STAFF ====================
+
+  Future<List<StaffAccount>> getStaffAccounts(String userId) async {
+    final response = await ApiService.get('/staff/accounts', params: {'user_id': userId});
+    if (response['success'] == true) {
+      return (response['accounts'] as List)
+          .map((a) => StaffAccount.fromMap(a as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch staff accounts');
+  }
+
+  Future<void> createStaffAccount(String userId, String staffName, String password) async {
+    final response = await ApiService.post('/staff/accounts', {
+      'user_id': userId,
+      'staff_name': staffName,
+      'password': password,
+    });
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to create staff account');
+    }
+  }
+
+  Future<void> deleteStaffAccount(String userId, String accountId) async {
+    final response = await ApiService.delete('/staff/accounts/$accountId?user_id=$userId');
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to delete staff account');
+    }
+  }
+
+  Future<StaffSubscriptionStatus> getStaffSubscriptionStatus(String userId) async {
+    final response = await ApiService.get('/staff/subscription', params: {'user_id': userId});
+    if (response['success'] == true) {
+      return StaffSubscriptionStatus.fromMap(response);
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch staff subscription status');
+  }
+
+  // ==================== ANNOUNCEMENTS ====================
+
+  Future<List<Announcement>> getAnnouncements(String userId) async {
+    final response = await ApiService.get('/announcements', params: {'user_id': userId});
+    if (response['success'] == true) {
+      return (response['announcements'] as List)
+          .map((a) => Announcement.fromMap(a as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch announcements');
+  }
+
+  Future<void> dismissAnnouncement(String userId, int announcementId) async {
+    final response = await ApiService.post('/announcements/$announcementId/dismiss', {
+      'user_id': userId,
+    });
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to dismiss announcement');
+    }
   }
 }

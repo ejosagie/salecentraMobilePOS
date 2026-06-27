@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../models/inventory.dart';
 import '../models/sale.dart';
 import '../models/customer.dart';
@@ -395,6 +396,27 @@ class RemoteDatabaseService {
     final response = await ApiService.delete('/storefront/admin/products/$productId?user_id=$userId');
     if (response['success'] != true) {
       throw Exception(response['error'] ?? 'Failed to delete product');
+    }
+  }
+
+  Future<String> uploadShopImage(String userId, String inventoryId, int imageIndex, File imageFile) async {
+    final response = await ApiService.uploadFile('/storefront/admin/upload-image', imageFile, {
+      'user_id': userId,
+      'inventory_id': inventoryId,
+      'image_index': imageIndex.toString(),
+    });
+    if (response['success'] == true) {
+      return response['image_url'] as String;
+    }
+    throw Exception(response['error'] ?? 'Failed to upload image');
+  }
+
+  Future<void> deleteShopImage(String userId, String inventoryId, int imageIndex) async {
+    final response = await ApiService.delete(
+      '/storefront/admin/delete-image?user_id=$userId&inventory_id=$inventoryId&image_index=$imageIndex',
+    );
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to delete image');
     }
   }
 

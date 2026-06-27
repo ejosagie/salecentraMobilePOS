@@ -1,6 +1,7 @@
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, File;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/user.dart';
 import '../../models/shop_settings.dart';
@@ -628,7 +629,11 @@ class _ShopProductsTabState extends State<_ShopProductsTab> {
   Future<void> _editProduct(ShopProduct product) async {
     final result = await showDialog<ShopProduct>(
       context: context,
-      builder: (context) => _EditProductDialog(product: product),
+      builder: (context) => _EditProductDialog(
+        product: product,
+        user: widget.user,
+        dbService: widget.dbService,
+      ),
     );
     if (result != null) {
       try {
@@ -785,7 +790,14 @@ class _ProductCard extends StatelessWidget {
 
 class _EditProductDialog extends StatefulWidget {
   final ShopProduct product;
-  const _EditProductDialog({required this.product});
+  final User user;
+  final RemoteDatabaseService dbService;
+
+  const _EditProductDialog({
+    required this.product,
+    required this.user,
+    required this.dbService,
+  });
 
   @override
   State<_EditProductDialog> createState() => _EditProductDialogState();
@@ -797,6 +809,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late TextEditingController _stockController;
   late TextEditingController _sortController;
   late bool _isActive;
+  String? _imageUrl1;
+  String? _imageUrl2;
+  String? _imageUrl3;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -806,6 +822,9 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     _stockController = TextEditingController(text: widget.product.stock.toString());
     _sortController = TextEditingController(text: widget.product.sortOrder.toString());
     _isActive = widget.product.isActive;
+    _imageUrl1 = widget.product.imageUrl;
+    _imageUrl2 = widget.product.imageUrl2;
+    _imageUrl3 = widget.product.imageUrl3;
   }
 
   @override
@@ -817,6 +836,123 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadImage(int imageIndex) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+
+    setState(() => _isUploading = true);
+    try {
+      final file = File(picked.path);
+      final inventoryId = widget.product.inventoryId ?? widget.product.id;
+      final url = await widget.dbService.uploadShopImage(
+        widget.user.id,
+        inventoryId,
+        imageIndex,
+        file,
+      );
+      if (mounted) {
+        setState(() {
+          if (imageIndex == 1) _imageUrl1 = url;
+          if (imageIndex == 2) _imageUrl2 = url;
+          if (imageIndex == 3) _imageUrl3 = url;
+          _isUploading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteImage(int imageIndex) async {
+    setState(() => _isUploading = true);
+    try {
+      final inventoryId = widget.product.inventoryId ?? widget.product.id;
+      await widget.dbService.deleteShopImage(widget.user.id, inventoryId, imageIndex);
+      if (mounted) {
+        setState(() {
+          if (imageIndex == 1) _imageUrl1 = null;
+          if (imageIndex == 2) _imageUrl2 = null;
+          if (imageIndex == 3) _imageUrl3 = null;
+          _isUploading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Widget _buildImageSlot(int index, String? url) {
+    return Expanded(
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppTheme.borderLight),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: url != null && url.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(url, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image))),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: _isUploading ? null : () => _deleteImage(index),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : InkWell(
+                      onTap: _isUploading ? null : () => _pickAndUploadImage(index),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate, size: 28, color: AppTheme.textMuted),
+                            SizedBox(height: 4),
+                            Text('Image $index', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          if (url != null && url.isNotEmpty)
+            TextButton.icon(
+              onPressed: _isUploading ? null : () => _pickAndUploadImage(index),
+              icon: const Icon(Icons.swap_horiz, size: 14),
+              label: const Text('Change', style: TextStyle(fontSize: 11)),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -825,6 +961,27 @@ class _EditProductDialogState extends State<_EditProductDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Image upload section
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Product Images', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildImageSlot(1, _imageUrl1),
+                const SizedBox(width: 8),
+                _buildImageSlot(2, _imageUrl2),
+                const SizedBox(width: 8),
+                _buildImageSlot(3, _imageUrl3),
+              ],
+            ),
+            if (_isUploading)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(),
+              ),
+            const SizedBox(height: 16),
             TextField(
               controller: _descController,
               maxLines: 3,
@@ -867,6 +1024,9 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               stock: int.tryParse(_stockController.text) ?? widget.product.stock,
               sortOrder: int.tryParse(_sortController.text) ?? widget.product.sortOrder,
               isActive: _isActive,
+              imageUrl: _imageUrl1,
+              imageUrl2: _imageUrl2,
+              imageUrl3: _imageUrl3,
             ));
           },
           child: const Text('Update'),

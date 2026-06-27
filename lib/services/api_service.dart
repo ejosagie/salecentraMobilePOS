@@ -123,4 +123,37 @@ class ApiService {
       throw Exception('Network error: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> uploadFile(String endpoint, File file, Map<String, String> fields) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$endpoint'));
+      request.fields.addAll(fields);
+      final multipartFile = await http.MultipartFile.fromPath(
+        'image',
+        file.path,
+      );
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.body.trim().startsWith('<')) {
+        throw Exception('Server returned HTML (${response.statusCode}). Check that baseUrl is correct and the API endpoint exists.');
+      }
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return responseData;
+      } else {
+        throw Exception(responseData['error'] ?? 'Upload failed');
+      }
+    } on SocketException catch (_) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    } on HttpException catch (_) {
+      throw Exception('Unable to reach the server. Please try again later.');
+    } catch (e) {
+      throw Exception('Upload error: $e');
+    }
+  }
 }

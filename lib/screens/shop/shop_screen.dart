@@ -929,13 +929,13 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   : InkWell(
                       onTap: _isUploading ? null : () => _pickAndUploadImage(index),
                       borderRadius: BorderRadius.circular(8),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_photo_alternate, size: 28, color: AppTheme.textMuted),
-                            SizedBox(height: 4),
-                            Text('Image $index', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                            const Icon(Icons.add_photo_alternate, size: 28, color: AppTheme.textMuted),
+                            const SizedBox(height: 4),
+                            Text('Image $index', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                           ],
                         ),
                       ),

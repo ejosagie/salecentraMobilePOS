@@ -275,6 +275,16 @@ class RemoteDatabaseService {
     }
   }
 
+  Future<List<DebtPayment>> getDebtPayments(String debtId) async {
+    final response = await ApiService.get('/debts/payments/$debtId');
+    if (response['success']) {
+      return (response['payments'] as List)
+          .map((p) => DebtPayment.fromMap(p))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch payment history');
+  }
+
   Future<Map<String, double>> getDebtSummary(String userId) async {
     final response = await ApiService.get('/debts/summary', params: {'user_id': userId});
     if (response['success']) {

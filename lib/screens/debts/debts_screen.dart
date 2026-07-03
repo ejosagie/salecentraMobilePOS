@@ -23,6 +23,9 @@ class _DebtsScreenState extends State<DebtsScreen> {
   User? _user;
   bool _isLoading = true;
   String _selectedTab = 'all';
+  final Map<String, bool> _expandedPayments = {};
+  final Map<String, List<DebtPayment>> _paymentHistory = {};
+  final Map<String, bool> _loadingPayments = {};
 
   @override
   void initState() {
@@ -32,7 +35,10 @@ class _DebtsScreenState extends State<DebtsScreen> {
 
   Future<void> _loadData() async {
     final user = await _authService.getCurrentUser();
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
     String? type;
     if (_selectedTab == 'owed') type = 'receivable';
@@ -83,8 +89,91 @@ class _DebtsScreenState extends State<DebtsScreen> {
 
     if (result != null) {
       await _dbService.recordDebtPayment(debt.id, result.amount, note: result.note);
+      _paymentHistory.remove(debt.id);
       _loadData();
     }
+  }
+
+  Future<void> _togglePaymentHistory(String debtId) async {
+    final isExpanded = _expandedPayments[debtId] ?? false;
+    setState(() {
+      _expandedPayments[debtId] = !isExpanded;
+    });
+    if (!isExpanded && !_paymentHistory.containsKey(debtId)) {
+      setState(() => _loadingPayments[debtId] = true);
+      try {
+        final payments = await _dbService.getDebtPayments(debtId);
+        setState(() {
+          _paymentHistory[debtId] = payments;
+          _loadingPayments[debtId] = false;
+        });
+      } catch (_) {
+        setState(() => _loadingPayments[debtId] = false);
+      }
+    }
+  }
+
+  List<Widget> _buildPaymentHistory(String debtId) {
+    if (_loadingPayments[debtId] == true) {
+      return [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+      ];
+    }
+    final payments = _paymentHistory[debtId] ?? [];
+    if (payments.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'No payments recorded yet',
+            style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+          ),
+        ),
+      ];
+    }
+    return payments.map((p) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.check_circle_outline, size: 16, color: AppTheme.success),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$currencySymbol${p.amount.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      Text(
+                        DateFormat('MMM d, yyyy').format(p.date),
+                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                  if (p.note != null && p.note!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        p.note!,
+                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   @override
@@ -251,20 +340,30 @@ class _DebtsScreenState extends State<DebtsScreen> {
                                   ),
                               ],
                             ),
-                            if (debt.balance > 0) ...[
-                              const SizedBox(height: 12),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () => _togglePaymentHistory(debt.id),
+                                  icon: Icon(
+                                    (_expandedPayments[debt.id] ?? false)
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Payment History'),
+                                ),
+                                if (debt.balance > 0)
                                   TextButton.icon(
                                     onPressed: () => _recordPayment(debt),
                                     icon: const Icon(Icons.payment, size: 18),
                                     label: const Text('Record Payment'),
                                   ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
+                            if (_expandedPayments[debt.id] ?? false) ..._buildPaymentHistory(debt.id),
                           ],
                         ),
                       ),

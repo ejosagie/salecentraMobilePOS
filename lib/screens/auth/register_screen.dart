@@ -13,6 +13,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _page0FormKey = GlobalKey<FormState>();
+  final _page1FormKey = GlobalKey<FormState>();
   final _pageController = PageController();
   
   // Controllers
@@ -100,6 +102,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _nextPage() {
     if (_currentPage < _totalPages - 1) {
+      final pageKey = _currentPage == 0 ? _page0FormKey : _page1FormKey;
+      if (!pageKey.currentState!.validate()) return;
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -133,9 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
+      body: Column(
           children: [
             // Progress indicator
             LinearProgressIndicator(
@@ -194,13 +196,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ],
-        ),
       ),
     );
   }
 
   Widget _buildAccountPage() {
-    return SingleChildScrollView(
+    return Form(
+      key: _page0FormKey,
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,17 +264,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
             validator: (value) {
+              if (value == null || value.isEmpty) return 'Please confirm your password';
               if (value != _passwordController.text) return 'Passwords do not match';
               return null;
             },
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildBusinessPage() {
-    return SingleChildScrollView(
+    return Form(
+      key: _page1FormKey,
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,11 +346,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildIndustryPage() {
-    return SingleChildScrollView(
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,6 +433,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
         ],
       ),
-    );
+    ));
   }
 }

@@ -276,7 +276,7 @@ class RemoteDatabaseService {
   }
 
   Future<List<DebtPayment>> getDebtPayments(String debtId) async {
-    final response = await ApiService.get('/debts/payments/$debtId');
+    final response = await ApiService.get('/debts/payments', params: {'debt_id': debtId});
     if (response['success']) {
       return (response['payments'] as List)
           .map((p) => DebtPayment.fromMap(p))

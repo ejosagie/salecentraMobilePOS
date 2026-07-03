@@ -107,8 +107,13 @@ class _DebtsScreenState extends State<DebtsScreen> {
           _paymentHistory[debtId] = payments;
           _loadingPayments[debtId] = false;
         });
-      } catch (_) {
+      } catch (e) {
         setState(() => _loadingPayments[debtId] = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load payments: $e')),
+          );
+        }
       }
     }
   }

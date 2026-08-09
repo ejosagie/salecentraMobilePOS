@@ -41,6 +41,8 @@ class _SalesScreenState extends State<SalesScreen> {
   int _selectedIndex = 1; // 0 = Items, 1 = Cart, 2 = Orders (staff only)
   List<ShopOrder> _pendingOrders = [];
   bool _isLoadingOrders = false;
+  final _productSearchController = TextEditingController();
+  List<InventoryItem> _filteredInventory = [];
 
   // Customer fields
   final _customerNameController = TextEditingController();
@@ -62,6 +64,7 @@ class _SalesScreenState extends State<SalesScreen> {
     _customerNameController.dispose();
     _customerPhoneController.dispose();
     _customerAddressController.dispose();
+    _productSearchController.dispose();
     super.dispose();
   }
 
@@ -74,6 +77,7 @@ class _SalesScreenState extends State<SalesScreen> {
     setState(() {
       _user = user;
       _inventory = inventory.where((i) => i.stock > 0).toList();
+      _filteredInventory = _inventory;
       _isLoading = false;
     });
 
@@ -631,6 +635,14 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
+  void _filterProducts(String query) {
+    setState(() {
+      _filteredInventory = _inventory
+          .where((item) => item.item.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
   Widget _buildItemsView() {
     if (_inventory.isEmpty) {
       return Center(
@@ -657,17 +669,49 @@ class _SalesScreenState extends State<SalesScreen> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.8,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: _inventory.length,
-      itemBuilder: (context, index) {
-        final item = _inventory[index];
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: _productSearchController,
+            onChanged: _filterProducts,
+            decoration: InputDecoration(
+              hintText: 'Search products...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _productSearchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _productSearchController.clear();
+                        _filterProducts('');
+                      },
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        Expanded(
+          child: _filteredInventory.isEmpty
+              ? Center(
+                  child: Text(
+                    'No products found',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: _filteredInventory.length,
+                  itemBuilder: (context, index) {
+                    final item = _filteredInventory[index];
         return Card(
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -723,6 +767,10 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
         );
       },
+                ),
+              ),
+          ],
+        ),
     );
   }
 

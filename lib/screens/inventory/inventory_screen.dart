@@ -364,7 +364,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         chipColor = AppTheme.error;
         label = 'Expired: $expiryDate';
       } else if (diff <= 7) {
-        chipColor = AppTheme.warning;
+        chipColor = AppTheme.error;
         label = 'Expires soon: $expiryDate';
       }
     } catch (_) {}

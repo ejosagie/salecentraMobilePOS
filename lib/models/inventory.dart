@@ -37,7 +37,7 @@ class InventoryItem {
       stock: map['stock'],
       costPrice: map['cost_price'].toDouble(),
       sellingPrice: map['selling_price'].toDouble(),
-      expiryDate: map['expiry_date'] as String?,
+      expiryDate: map['expiry_date'] != null ? map['expiry_date'].toString() : null,
     );
   }
 

@@ -842,10 +842,8 @@ class _HomeScreenState extends State<_HomeScreen> {
                   Icons.storefront_outlined,
                   AppTheme.primaryColor,
                 ),
-                if (_expiredCount > 0 || _expiringSoonCount > 0) ...[
-                  const SizedBox(height: 12),
-                  _buildExpiryAlertCard(),
-                ],
+                const SizedBox(height: 12),
+                _buildExpiryAlertCard(),
                 const SizedBox(height: 12),
                 _buildSummaryCard(
                   'Amount Owed to You',
@@ -1322,6 +1320,20 @@ class _HomeScreenState extends State<_HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            if (_expiredCount == 0 && _expiringSoonCount == 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: AppTheme.success, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'No items expiring soon',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
             if (_expiredCount > 0) ...[
               Container(
                 padding: const EdgeInsets.all(12),

@@ -766,12 +766,11 @@ class _SalesScreenState extends State<SalesScreen> {
             ),
           ),
         );
-      },
+                  },
                 ),
               ),
-          ],
-        ),
-    );
+            ],
+          );
   }
 
   Widget _buildCustomerSection() {

@@ -71,8 +71,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   double get grossSales => _sales.fold(0, (sum, s) => sum + (s.price * s.quantity));
   double get totalDiscounts => _sales.fold(0, (sum, s) => sum + s.discount);
   double get totalSales => _sales.fold(0, (sum, s) => sum + s.total);
+  double get totalCOGS => _sales.fold(0, (sum, s) => sum + (s.costPrice * s.quantity));
   double get totalExpenses => _expenses.fold(0, (sum, e) => sum + e.amount);
-  double get profit => totalSales - totalExpenses;
+  double get profit => totalSales - totalCOGS - totalExpenses;
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +141,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 '$currencySymbol${totalSales.toStringAsFixed(2)}',
                 Icons.point_of_sale,
                 AppTheme.info,
+              ),
+              const SizedBox(height: 12),
+              _buildSummaryCard(
+                'Cost of Goods Sold',
+                '-$currencySymbol${totalCOGS.toStringAsFixed(2)}',
+                Icons.production_quantity_limits_outlined,
+                AppTheme.error,
               ),
               const SizedBox(height: 12),
               _buildSummaryCard(

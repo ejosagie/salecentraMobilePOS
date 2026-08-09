@@ -9,6 +9,7 @@ class Sale {
   final double price;
   final double discount;
   final double total;
+  final double costPrice;
   final String? enteredByStaffName;
   final String? entryMode;
   final String? customerName;
@@ -24,6 +25,7 @@ class Sale {
     required this.price,
     this.discount = 0.0,
     required this.total,
+    this.costPrice = 0.0,
     this.enteredByStaffName,
     this.entryMode = 'owner',
     this.customerName,
@@ -41,6 +43,7 @@ class Sale {
       'price': price,
       'discount': discount,
       'total': total,
+      'cost_price': costPrice,
       'entered_by_staff_name': enteredByStaffName,
       'entered_by_staff_name_normalized': enteredByStaffName?.toLowerCase().trim(),
       'entry_mode': entryMode,
@@ -60,6 +63,7 @@ class Sale {
       price: map['price'].toDouble(),
       discount: (map['discount'] ?? 0.0).toDouble(),
       total: map['total'].toDouble(),
+      costPrice: (map['cost_price'] ?? 0.0).toDouble(),
       enteredByStaffName: map['entered_by_staff_name'],
       entryMode: map['entry_mode'] ?? 'owner',
       customerName: map['customer_name'],

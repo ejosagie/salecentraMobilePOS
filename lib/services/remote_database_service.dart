@@ -107,6 +107,7 @@ class RemoteDatabaseService {
       'quantity': sale.quantity,
       'price': sale.price,
       'discount': sale.discount,
+      'cost_price': sale.costPrice,
       'entered_by_staff_name': sale.enteredByStaffName,
       'entry_mode': sale.entryMode,
       'customer_name': sale.customerName,

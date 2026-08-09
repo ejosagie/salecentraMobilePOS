@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/inventory.dart';
@@ -248,6 +249,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                           color: AppTheme.textSecondary.withOpacity(0.8),
                                         ),
                                       ),
+                                      if (item.expiryDate != null && item.expiryDate!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        _buildExpiryChip(item.expiryDate!),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -345,6 +350,41 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
     );
   }
+
+  Widget _buildExpiryChip(String expiryDate) {
+    Color chipColor = AppTheme.success;
+    String label = 'Expires: $expiryDate';
+
+    try {
+      final expiry = DateTime.parse(expiryDate);
+      final now = DateTime.now();
+      final diff = expiry.difference(now).inDays;
+
+      if (diff < 0) {
+        chipColor = AppTheme.error;
+        label = 'Expired: $expiryDate';
+      } else if (diff <= 7) {
+        chipColor = AppTheme.warning;
+        label = 'Expires soon: $expiryDate';
+      }
+    } catch (_) {}
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: chipColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
 }
 
 // Add Item Dialog
@@ -375,6 +415,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   final _sellingController = TextEditingController();
   final _dbService = RemoteDatabaseService();
   bool _isLoading = false;
+  DateTime? _expiryDate;
 
   double _parseAmount(String value) => double.tryParse(value.trim()) ?? 0.0;
 
@@ -413,6 +454,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
         stock: int.parse(_stockController.text),
         costPrice: double.parse(_costController.text),
         sellingPrice: double.parse(_sellingController.text),
+        expiryDate: _expiryDate != null ? DateFormat('yyyy-MM-dd').format(_expiryDate!) : null,
       );
 
       await _dbService.addInventoryItem(item);
@@ -535,6 +577,40 @@ class _AddItemDialogState extends State<AddItemDialog> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                  );
+                  if (picked != null) {
+                    setState(() => _expiryDate = picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Expiry Date (Optional)',
+                    prefixIcon: const Icon(Icons.calendar_today_outlined),
+                    suffixIcon: _expiryDate != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _expiryDate = null),
+                          )
+                        : null,
+                  ),
+                  child: Text(
+                    _expiryDate != null
+                        ? DateFormat('yyyy-MM-dd').format(_expiryDate!)
+                        : 'Select date',
+                    style: TextStyle(
+                      color: _expiryDate != null ? null : AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -580,6 +656,15 @@ class _EditItemDialogState extends State<EditItemDialog> {
   late final _sellingController = TextEditingController(text: widget.item.sellingPrice.toString());
   final _dbService = RemoteDatabaseService();
   bool _isLoading = false;
+  DateTime? _expiryDate;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.item.expiryDate != null && widget.item.expiryDate!.isNotEmpty) {
+      _expiryDate = DateTime.tryParse(widget.item.expiryDate!);
+    }
+  }
 
   @override
   void dispose() {
@@ -601,6 +686,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
         stock: int.parse(_stockController.text),
         costPrice: double.parse(_costController.text),
         sellingPrice: double.parse(_sellingController.text),
+        expiryDate: _expiryDate != null ? DateFormat('yyyy-MM-dd').format(_expiryDate!) : null,
       );
 
       await _dbService.updateInventoryItem(updatedItem);
@@ -676,6 +762,40 @@ class _EditItemDialogState extends State<EditItemDialog> {
                   if (double.tryParse(value) == null) return 'Enter a valid amount';
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                  );
+                  if (picked != null) {
+                    setState(() => _expiryDate = picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Expiry Date (Optional)',
+                    prefixIcon: const Icon(Icons.calendar_today_outlined),
+                    suffixIcon: _expiryDate != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _expiryDate = null),
+                          )
+                        : null,
+                  ),
+                  child: Text(
+                    _expiryDate != null
+                        ? DateFormat('yyyy-MM-dd').format(_expiryDate!)
+                        : 'Select date',
+                    style: TextStyle(
+                      color: _expiryDate != null ? null : AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

@@ -25,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _businessAddressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _contactPersonController = TextEditingController();
+  final _referralController = TextEditingController();
   
   final _authService = AuthService();
   
@@ -47,6 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _businessAddressController.dispose();
     _phoneController.dispose();
     _contactPersonController.dispose();
+    _referralController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -80,6 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         industry: _selectedIndustry!,
         country: _selectedCountry!,
         currency: AppConstants.countries[_selectedCountry!] ?? 'NGN',
+        referralCode: _referralController.text.trim().isEmpty ? null : _referralController.text.trim(),
       );
       
       if (mounted) {
@@ -268,6 +271,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               if (value != _passwordController.text) return 'Passwords do not match';
               return null;
             },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _referralController,
+            decoration: const InputDecoration(
+              labelText: 'Referral Code (Optional)',
+              prefixIcon: Icon(Icons.card_giftcard_outlined),
+              hintText: 'Enter agent referral code if you have one',
+            ),
           ),
         ],
       ),

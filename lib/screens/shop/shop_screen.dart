@@ -1092,7 +1092,7 @@ class _ShopSubscriptionTab extends StatelessWidget {
                   ] else if (status == 'pending')
                     const Text('Your Shop Addon request is pending admin approval. Your shop will be upgraded once the admin confirms your payment (usually within 48 hours).')
                   else
-                    const Text('You are on the Free Shop plan (10 products). Subscribe for unlimited products for your business online storefront.'),
+                    const Text('You are on the Free Shop plan with limited products. Subscribe for unlimited products for your business online storefront.'),
                 ],
               ),
             ),
@@ -1100,7 +1100,7 @@ class _ShopSubscriptionTab extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Product limit progress
-          if (settings.productLimit > 0) ...[
+          if (settings.productLimit > 0 && status != 'active') ...[
             const Text('Product Usage', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             LinearProgressIndicator(
@@ -1242,12 +1242,18 @@ class _ShopOrdersTabState extends State<_ShopOrdersTab> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: Text(filter),
+                    label: Text(
+                      filter,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppTheme.textPrimary,
+                      ),
+                    ),
                     selected: isSelected,
                     onSelected: (selected) {
                       if (selected) setState(() => _filter = filter);
                     },
-                    selectedColor: AppTheme.primaryColor.withOpacity(0.15),
+                    selectedColor: AppTheme.primaryColor,
+                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                   ),
                 );
               }).toList(),
@@ -1369,16 +1375,16 @@ class _OrderCard extends StatelessWidget {
                       onPressed: onComplete,
                       icon: const Icon(Icons.check, size: 18),
                       label: const Text('Complete'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: onCancel,
                       icon: const Icon(Icons.close, size: 18),
                       label: const Text('Reject'),
-                      style: OutlinedButton.styleFrom(foregroundColor: AppTheme.error),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
                     ),
                   ),
                 ],

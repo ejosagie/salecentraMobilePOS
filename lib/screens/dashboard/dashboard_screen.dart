@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';
 import '../../models/user.dart';
+import '../../models/inventory.dart';
 import '../../utils/theme.dart';
 import '../inventory/inventory_screen.dart';
 import '../sales/sales_screen.dart';
@@ -386,6 +387,10 @@ class _HomeScreenState extends State<_HomeScreen> {
   double _monthSales = 0;
   int _inventoryCount = 0;
   double _inventoryValue = 0;
+  int _expiredCount = 0;
+  int _expiringSoonCount = 0;
+  List<InventoryItem> _expiredItems = [];
+  List<InventoryItem> _expiringSoonItems = [];
   int _todaySalesCount = 0;
   int _customerCount = 0;
   double _receivables = 0;
@@ -486,6 +491,21 @@ class _HomeScreenState extends State<_HomeScreen> {
       _monthSales = monthSales;
       _inventoryCount = inventory.length;
       _inventoryValue = inventory.fold(0.0, (sum, item) => sum + (item.stock * item.sellingPrice));
+      final now = DateTime.now();
+      _expiredItems = inventory.where((item) {
+        if (item.expiryDate == null || item.expiryDate!.isEmpty) return false;
+        final expiry = DateTime.tryParse(item.expiryDate!);
+        return expiry != null && expiry.isBefore(now);
+      }).toList();
+      _expiringSoonItems = inventory.where((item) {
+        if (item.expiryDate == null || item.expiryDate!.isEmpty) return false;
+        final expiry = DateTime.tryParse(item.expiryDate!);
+        if (expiry == null) return false;
+        final diff = expiry.difference(now).inDays;
+        return diff >= 0 && diff <= 7;
+      }).toList();
+      _expiredCount = _expiredItems.length;
+      _expiringSoonCount = _expiringSoonItems.length;
       _todaySalesCount = todaySalesList.length;
       _customerCount = customers.length;
       _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
@@ -822,6 +842,10 @@ class _HomeScreenState extends State<_HomeScreen> {
                   Icons.storefront_outlined,
                   AppTheme.primaryColor,
                 ),
+                if (_expiredCount > 0 || _expiringSoonCount > 0) ...[
+                  const SizedBox(height: 12),
+                  _buildExpiryAlertCard(),
+                ],
                 const SizedBox(height: 12),
                 _buildSummaryCard(
                   'Amount Owed to You',
@@ -1273,6 +1297,119 @@ class _HomeScreenState extends State<_HomeScreen> {
             fontWeight: FontWeight.w600,
             color: color,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpiryAlertCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.schedule_outlined, color: AppTheme.warning, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Expiry Alerts',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_expiredCount > 0) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppTheme.error, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_expiredCount expired item(s)',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ..._expiredItems.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.circle, size: 6, color: AppTheme.error),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${item.item} — expired ${item.expiryDate}',
+                              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              if (_expiringSoonCount > 0) const SizedBox(height: 8),
+            ],
+            if (_expiringSoonCount > 0) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_expiringSoonCount expiring within 7 days',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ..._expiringSoonItems.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.circle, size: 6, color: AppTheme.warning),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${item.item} — expires ${item.expiryDate}',
+                              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

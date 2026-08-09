@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../../models/user.dart';
 import '../../models/inventory.dart';
 import '../../services/auth_service.dart';
@@ -24,6 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _stockController = TextEditingController();
   final _costController = TextEditingController();
   final _priceController = TextEditingController();
+  DateTime? _expiryDate;
 
   User? _user;
   String? _logoBase64;
@@ -92,11 +94,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         stock: stock,
         costPrice: cost,
         sellingPrice: price,
+        expiryDate: _expiryDate != null ? DateFormat('yyyy-MM-dd').format(_expiryDate!) : null,
       ));
       _itemController.clear();
       _stockController.clear();
       _costController.clear();
       _priceController.clear();
+      _expiryDate = null;
     });
   }
 
@@ -408,6 +412,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 30)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                      );
+                      if (picked != null) {
+                        setState(() => _expiryDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Expiry Date (Optional)',
+                        prefixIcon: const Icon(Icons.calendar_today_outlined),
+                        suffixIcon: _expiryDate != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () => setState(() => _expiryDate = null),
+                              )
+                            : null,
+                      ),
+                      child: Text(
+                        _expiryDate != null
+                            ? DateFormat('yyyy-MM-dd').format(_expiryDate!)
+                            : 'Select date',
+                        style: TextStyle(
+                          color: _expiryDate != null ? null : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(

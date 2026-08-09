@@ -28,6 +28,7 @@ class AuthService {
     required String industry,
     required String country,
     String currency = 'NGN',
+    String? referralCode,
   }) async {
     final response = await ApiService.post('/auth/register', {
       'email': email,
@@ -38,6 +39,7 @@ class AuthService {
       'contact_person': contactPerson,
       'industry': industry,
       'country': country,
+      if (referralCode != null) 'referral_code': referralCode,
     });
 
     if (response['success']) {

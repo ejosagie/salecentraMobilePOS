@@ -34,6 +34,7 @@ class RemoteDatabaseService {
       'stock': item.stock,
       'cost_price': item.costPrice,
       'selling_price': item.sellingPrice,
+      'expiry_date': item.expiryDate,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to add item');
@@ -46,6 +47,7 @@ class RemoteDatabaseService {
       'stock': item.stock,
       'cost_price': item.costPrice,
       'selling_price': item.sellingPrice,
+      'expiry_date': item.expiryDate,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to update item');

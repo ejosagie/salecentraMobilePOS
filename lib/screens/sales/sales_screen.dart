@@ -304,6 +304,64 @@ class _SalesScreenState extends State<SalesScreen> {
     setState(() => item.discount = discount);
   }
 
+  Future<void> _showEditPriceDialog(int index) async {
+    final item = _cart[index];
+    final controller = TextEditingController(
+      text: item.unitPrice.toStringAsFixed(2),
+    );
+
+    final newPrice = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Price for ${item.itemName}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Selling price',
+            prefixText: currencySymbol,
+            helperText: 'Original price: $currencySymbol${item.inventoryItem.sellingPrice.toStringAsFixed(2)}',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, -1.0),
+            child: const Text('Reset'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text.trim());
+              if (value == null || value < 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enter a valid price'), backgroundColor: AppTheme.error),
+                );
+                return;
+              }
+              Navigator.pop(context, value);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (newPrice == null || !mounted) return;
+    setState(() {
+      if (newPrice == -1.0) {
+        item.resetPrice();
+      } else {
+        item.unitPrice = newPrice;
+      }
+    });
+  }
+
   double get totalAmount => _cart.fold(0, (sum, item) => sum + item.totalPrice);
 
   Future<void> _completeSale() async {
@@ -318,11 +376,15 @@ class _SalesScreenState extends State<SalesScreen> {
       final now = DateTime.now();
       final receiptId = _uuid.v4();
       _lastCompletedSaleItems = _cart
-          .map((item) => CartItem(
-                inventoryItem: item.inventoryItem,
-                quantity: item.quantity,
-                discount: item.discount,
-              ))
+          .map((item) {
+            final copy = CartItem(
+              inventoryItem: item.inventoryItem,
+              quantity: item.quantity,
+              discount: item.discount,
+            );
+            if (item.hasCustomPrice) copy.unitPrice = item.unitPrice;
+            return copy;
+          })
           .toList();
       _lastCompletedReceiptId = receiptId;
       _lastCompletedSaleDate = now;
@@ -924,9 +986,20 @@ class _SalesScreenState extends State<SalesScreen> {
                         '$currencySymbol${item.unitPrice.toStringAsFixed(2)} each',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppTheme.textSecondary,
+                          color: item.hasCustomPrice ? AppTheme.warning : AppTheme.textSecondary,
                         ),
                       ),
+                      if (item.hasCustomPrice) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Original: $currencySymbol${item.inventoryItem.sellingPrice.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
                       if (item.discount > 0) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -938,14 +1011,29 @@ class _SalesScreenState extends State<SalesScreen> {
                         ),
                       ],
                       const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => _showDiscountDialog(cartIndex),
-                        icon: const Icon(Icons.local_offer_outlined, size: 16),
-                        label: Text(item.discount > 0 ? 'Edit Discount' : 'Add Discount'),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (!widget.isStaffMode)
+                            OutlinedButton.icon(
+                              onPressed: () => _showEditPriceDialog(cartIndex),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: Text(item.hasCustomPrice ? 'Edit Price' : 'Edit Price'),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              ),
+                            ),
+                          OutlinedButton.icon(
+                            onPressed: () => _showDiscountDialog(cartIndex),
+                            icon: const Icon(Icons.local_offer_outlined, size: 16),
+                            label: Text(item.discount > 0 ? 'Edit Discount' : 'Add Discount'),
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

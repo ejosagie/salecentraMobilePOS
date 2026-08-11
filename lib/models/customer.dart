@@ -6,6 +6,8 @@ class Customer {
   final String? phone;
   final String? address;
   final DateTime createdAt;
+  double totalPurchases;
+  int purchaseCount;
 
   Customer({
     required this.id,
@@ -15,6 +17,8 @@ class Customer {
     this.phone,
     this.address,
     DateTime? createdAt,
+    this.totalPurchases = 0,
+    this.purchaseCount = 0,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -45,6 +49,8 @@ class Customer {
       phone: map['phone']?.toString(),
       address: map['address']?.toString(),
       createdAt: parseCreatedAt(map['created_at']),
+      totalPurchases: (map['total_purchases'] as num?)?.toDouble() ?? 0,
+      purchaseCount: (map['purchase_count'] as num?)?.toInt() ?? 0,
     );
   }
 }

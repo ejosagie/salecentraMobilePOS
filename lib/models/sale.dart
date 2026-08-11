@@ -77,6 +77,7 @@ class CartItem {
   final InventoryItem inventoryItem;
   int quantity;
   double discount;
+  double? _customPrice;
 
   CartItem({
     required this.inventoryItem,
@@ -84,7 +85,10 @@ class CartItem {
     this.discount = 0,
   });
 
-  double get unitPrice => inventoryItem.sellingPrice;
+  double get unitPrice => _customPrice ?? inventoryItem.sellingPrice;
+  set unitPrice(double value) => _customPrice = value;
+  bool get hasCustomPrice => _customPrice != null;
+  void resetPrice() => _customPrice = null;
   double get totalPrice => (unitPrice * quantity) - discount;
   String get itemName => inventoryItem.item;
 }

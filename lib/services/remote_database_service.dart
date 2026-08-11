@@ -169,6 +169,14 @@ class RemoteDatabaseService {
     }
   }
 
+  Future<Map<String, dynamic>> getCustomerPurchases(String userId) async {
+    final response = await ApiService.get('/customers/purchases', params: {'user_id': userId});
+    if (response['success']) {
+      return response['purchases'] as Map<String, dynamic>;
+    }
+    return {};
+  }
+
   // ==================== NOTIFICATIONS ====================
 
   Future<List<AppNotification>> getNotifications(String userId) async {
@@ -484,6 +492,16 @@ class RemoteDatabaseService {
     final response = await ApiService.delete('/staff/accounts/$accountId?user_id=$userId');
     if (response['success'] != true) {
       throw Exception(response['error'] ?? 'Failed to delete staff account');
+    }
+  }
+
+  Future<void> toggleStaffAccount(String userId, String accountId, bool isActive) async {
+    final response = await ApiService.put('/staff/accounts/$accountId/toggle', {
+      'user_id': userId,
+      'is_active': isActive,
+    });
+    if (response['success'] != true) {
+      throw Exception(response['error'] ?? 'Failed to update staff account');
     }
   }
 

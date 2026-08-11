@@ -2,11 +2,13 @@ class StaffAccount {
   final String id;
   final String staffName;
   final String? createdAt;
+  final bool isActive;
 
   StaffAccount({
     required this.id,
     required this.staffName,
     this.createdAt,
+    this.isActive = true,
   });
 
   factory StaffAccount.fromMap(Map<String, dynamic> map) {
@@ -14,6 +16,7 @@ class StaffAccount {
       id: map['id'] as String,
       staffName: map['staff_name'] as String? ?? '',
       createdAt: map['created_at'] as String?,
+      isActive: map['is_active'] == null ? true : map['is_active'] == 1 || map['is_active'] == true,
     );
   }
 }

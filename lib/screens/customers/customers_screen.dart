@@ -47,7 +47,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
     try {
       final customers = await _dbService.getCustomers(user.id);
+      final purchases = await _dbService.getCustomerPurchases(user.id);
       if (!mounted) return;
+
+      for (final customer in customers) {
+        final data = purchases[customer.id];
+        if (data != null) {
+          customer.totalPurchases = (data['total'] as num?)?.toDouble() ?? 0;
+          customer.purchaseCount = (data['count'] as num?)?.toInt() ?? 0;
+        }
+      }
 
       setState(() {
         _user = user;
@@ -208,9 +217,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                           color: AppTheme.textMuted,
                                         ),
                                       ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.shopping_bag_outlined, size: 14, color: AppTheme.primaryColor),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${customer.purchaseCount} purchases',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.payments_outlined, size: 14, color: AppTheme.success),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${_user?.currencySymbol ?? '\u20a6'}${customer.totalPurchases.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.success,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
-                                isThreeLine: customer.email != null && customer.email!.isNotEmpty,
+                                isThreeLine: true,
                                 onTap: () => _showCustomerDialog(existing: customer),
                                 trailing: const Icon(Icons.edit_outlined, size: 20),
                               ),

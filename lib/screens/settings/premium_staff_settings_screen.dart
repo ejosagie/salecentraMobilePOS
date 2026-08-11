@@ -148,6 +148,28 @@ class _PremiumStaffSettingsScreenState
     }
   }
 
+  Future<void> _toggleStaffActive(StaffAccount account) async {
+    if (_user == null) return;
+    try {
+      await _dbService.toggleStaffAccount(_user!.id, account.id, !account.isActive);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(account.isActive ? '${account.staffName} deactivated' : '${account.staffName} activated'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
   Future<void> _openSubscribeLink() async {
     if (Platform.isIOS) {
       showDialog(
@@ -380,20 +402,50 @@ class _PremiumStaffSettingsScreenState
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: AppTheme.primaryColor,
+        leading: CircleAvatar(
+          backgroundColor: account.isActive ? AppTheme.primaryColor : AppTheme.textMuted,
           child: Icon(Icons.person, color: Colors.white, size: 20),
         ),
-        title: Text(account.staffName),
+        title: Row(
+          children: [
+            Text(account.staffName),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: account.isActive ? AppTheme.success.withOpacity(0.1) : AppTheme.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                account.isActive ? 'Active' : 'Inactive',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: account.isActive ? AppTheme.success : AppTheme.error,
+                ),
+              ),
+            ),
+          ],
+        ),
         subtitle: Text(
           account.createdAt != null
               ? 'Added ${account.createdAt!.substring(0, 10)}'
               : 'Staff account',
           style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-          onPressed: () => _deleteStaff(account),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch(
+              value: account.isActive,
+              onChanged: (_) => _toggleStaffActive(account),
+              activeColor: AppTheme.success,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+              onPressed: () => _deleteStaff(account),
+            ),
+          ],
         ),
       ),
     );

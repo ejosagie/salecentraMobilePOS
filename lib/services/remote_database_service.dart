@@ -8,6 +8,7 @@ import '../models/invoice.dart';
 import '../models/notification.dart';
 import '../models/shop_settings.dart';
 import '../models/shop_product.dart';
+import '../models/refund.dart';
 import '../models/shop_order.dart';
 import '../models/announcement.dart';
 import '../models/premium_staff.dart';
@@ -117,6 +118,59 @@ class RemoteDatabaseService {
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to record sale');
     }
+  }
+
+  Future<Map<String, dynamic>> refundSale({
+    required String saleId,
+    required String userId,
+    required double amount,
+    String? reason,
+    String refundType = 'partial',
+    String? refundedBy,
+  }) async {
+    final response = await ApiService.post('/sales/$saleId/refund', {
+      'user_id': userId,
+      'amount': amount,
+      'reason': reason,
+      'refund_type': refundType,
+      'refunded_by': refundedBy,
+    });
+    if (response['success'] == true) {
+      return {
+        'refund_id': response['refund_id'],
+        'refunded_amount': (response['refunded_amount'] as num?)?.toDouble() ?? 0.0,
+        'sale_refund_status': response['sale_refund_status'],
+        'total_refunded': (response['total_refunded'] as num?)?.toDouble() ?? 0.0,
+        'remaining': (response['remaining'] as num?)?.toDouble() ?? 0.0,
+      };
+    }
+    throw Exception(response['error'] ?? 'Failed to process refund');
+  }
+
+  Future<List<Refund>> getRefunds(String userId, {DateTime? startDate, DateTime? endDate}) async {
+    final params = {'user_id': userId};
+    if (startDate != null) params['start_date'] = startDate.toIso8601String();
+    if (endDate != null) params['end_date'] = endDate.toIso8601String();
+
+    final response = await ApiService.get('/refunds', params: params);
+    if (response['success']) {
+      return (response['refunds'] as List)
+          .map((r) => Refund.fromMap(r))
+          .toList();
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch refunds');
+  }
+
+  Future<double> getTotalRefunds(String userId, {DateTime? startDate, DateTime? endDate}) async {
+    final params = {'user_id': userId};
+    if (startDate != null) params['start_date'] = startDate.toIso8601String();
+    if (endDate != null) params['end_date'] = endDate.toIso8601String();
+
+    final response = await ApiService.get('/refunds/total', params: params);
+    if (response['success']) {
+      return (response['total'] as num?)?.toDouble() ?? 0.0;
+    }
+    throw Exception(response['error'] ?? 'Failed to fetch total refunds');
   }
 
   // ==================== CUSTOMERS ====================

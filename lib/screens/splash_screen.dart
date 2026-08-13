@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/update_service.dart';
 import '../utils/theme.dart';
 import '../widgets/app_logo.dart';
 import 'account/account_status_screen.dart';
@@ -59,8 +60,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
         );
       } else if (user != null && user.onboardingComplete) {
+        await UpdateService.showUpdateDialogIfNeeded(context);
+        if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else if (user != null) {
+        await UpdateService.showUpdateDialogIfNeeded(context);
+        if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/onboarding');
       } else {
         Navigator.pushReplacementNamed(context, '/login');

@@ -15,6 +15,8 @@ class Sale {
   final String? customerName;
   final String? customerPhone;
   final String? customerAddress;
+  final String? refundStatus;
+  final double refundedAmount;
 
   Sale({
     required this.id,
@@ -31,6 +33,8 @@ class Sale {
     this.customerName,
     this.customerPhone,
     this.customerAddress,
+    this.refundStatus,
+    this.refundedAmount = 0.0,
   });
 
   Map<String, dynamic> toMap() {
@@ -50,6 +54,8 @@ class Sale {
       'customer_name': customerName,
       'customer_phone': customerPhone,
       'customer_address': customerAddress,
+      'refund_status': refundStatus,
+      'refunded_amount': refundedAmount,
     };
   }
 
@@ -69,8 +75,15 @@ class Sale {
       customerName: map['customer_name'],
       customerPhone: map['customer_phone'],
       customerAddress: map['customer_address'],
+      refundStatus: map['refund_status'],
+      refundedAmount: (map['refunded_amount'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  bool get isRefunded => refundStatus != null;
+  bool get isFullyRefunded => refundStatus == 'fully_refunded';
+  bool get isPartiallyRefunded => refundStatus == 'partially_refunded';
+  double get netTotal => total - refundedAmount;
 }
 
 class CartItem {

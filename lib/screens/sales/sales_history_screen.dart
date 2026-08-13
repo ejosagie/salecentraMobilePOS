@@ -7,8 +7,16 @@ import '../../services/remote_database_service.dart';
 import '../../services/pdf_service.dart';
 import '../../utils/theme.dart';
 
+
 class SalesHistoryScreen extends StatefulWidget {
-  const SalesHistoryScreen({super.key});
+  final bool isStaffMode;
+  final String? staffName;
+
+  const SalesHistoryScreen({
+    super.key,
+    this.isStaffMode = false,
+    this.staffName,
+  });
 
   @override
   State<SalesHistoryScreen> createState() => _SalesHistoryScreenState();
@@ -79,7 +87,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   String get currencySymbol => _user?.currencySymbol ?? '₦';
 
-  double get totalAmount => _filteredSales.fold(0, (sum, s) => sum + s.total);
+  double get totalAmount => _filteredSales.fold(0, (sum, s) => sum + s.netTotal);
 
   @override
   Widget build(BuildContext context) {
@@ -205,6 +213,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   Widget _buildSaleCard(Sale sale) {
     final hasDiscount = sale.discount > 0;
+    final isRefunded = sale.isRefunded;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -217,10 +226,16 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.1),
+                  color: isRefunded
+                      ? AppTheme.warning.withValues(alpha: 0.1)
+                      : AppTheme.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.receipt, color: AppTheme.success, size: 24),
+                child: Icon(
+                  isRefunded ? Icons.undo : Icons.receipt,
+                  color: isRefunded ? AppTheme.warning : AppTheme.success,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -271,20 +286,62 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           color: AppTheme.info,
                         ),
                       ),
+                    if (isRefunded) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: sale.isFullyRefunded
+                              ? AppTheme.error.withValues(alpha: 0.1)
+                              : AppTheme.warning.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          sale.isFullyRefunded
+                              ? 'FULLY REFUNDED'
+                              : 'PARTIAL REFUND: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: sale.isFullyRefunded ? AppTheme.error : AppTheme.warning,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '$currencySymbol${sale.total.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: AppTheme.success,
+                  if (isRefunded) ...[
+                    Text(
+                      '$currencySymbol${sale.total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textMuted,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$currencySymbol${sale.netTotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: sale.isFullyRefunded ? AppTheme.error : AppTheme.warning,
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      '$currencySymbol${sale.total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppTheme.success,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Icon(Icons.share, size: 16, color: AppTheme.textMuted),
                 ],
@@ -313,6 +370,38 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   _shareReceipt(sale);
                 },
               ),
+              if (sale.isRefunded) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.info_outline, color: AppTheme.info),
+                  title: const Text('View Refund Details'),
+                  subtitle: Text(
+                    sale.isFullyRefunded
+                        ? 'Fully refunded: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)}'
+                        : 'Partially refunded: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)}',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRefundDetails(sale);
+                  },
+                ),
+              ],
+              if (!widget.isStaffMode && !sale.isFullyRefunded) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.undo, color: AppTheme.warning),
+                  title: const Text('Process Refund'),
+                  subtitle: Text(
+                    sale.isPartiallyRefunded
+                        ? 'Refunded: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)} / ${sale.total.toStringAsFixed(2)}'
+                        : 'Full or partial refund',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRefundDialog(sale);
+                  },
+                ),
+              ],
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.close),
@@ -338,4 +427,294 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       }
     }
   }
-}
+
+  void _showRefundDialog(Sale sale) {
+    final remaining = sale.total - sale.refundedAmount;
+    final amountController = TextEditingController(text: remaining.toStringAsFixed(2));
+    final notesController = TextEditingController();
+    String refundType = 'full';
+    String? selectedReason;
+
+    const predefinedReasons = [
+      'Customer returned item',
+      'Wrong item sold',
+      'Damaged goods',
+      'Pricing error',
+      'Customer changed mind',
+      'Duplicate sale',
+      'Other',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Process Refund'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Item: ${sale.item}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('Sale total: $currencySymbol${sale.total.toStringAsFixed(2)}'),
+                if (sale.isPartiallyRefunded) ...[
+                  const SizedBox(height: 4),
+                  Text('Already refunded: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)}',
+                      style: TextStyle(color: AppTheme.warning)),
+                ],
+                const SizedBox(height: 4),
+                Text('Remaining: $currencySymbol${remaining.toStringAsFixed(2)}',
+                    style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Full'),
+                        value: 'full',
+                        groupValue: refundType,
+                        onChanged: (v) => setState(() => refundType = v!),
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<String>(
+                        title: const Text('Partial'),
+                        value: 'partial',
+                        groupValue: refundType,
+                        onChanged: (v) => setState(() => refundType = v!),
+                      ),
+                    ),
+                  ],
+                ),
+                if (refundType == 'partial') ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Refund amount',
+                      prefixText: currencySymbol,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: predefinedReasons
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .toList(),
+                  onChanged: (v) => setState(() => selectedReason = v),
+                ),
+                if (selectedReason == 'Other') ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Custom reason / notes',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.warning),
+              onPressed: () {
+                if (selectedReason == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a reason'), backgroundColor: AppTheme.error),
+                  );
+                  return;
+                }
+                final reason = selectedReason == 'Other'
+                    ? notesController.text.trim()
+                    : selectedReason;
+                if (selectedReason == 'Other' && reason.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a custom reason'), backgroundColor: AppTheme.error),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                _processRefund(sale, refundType, amountController.text, reason);
+              },
+              child: const Text('Process Refund'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processRefund(Sale sale, String refundType, String amountText, String reason) async {
+    if (_user == null) return;
+
+    double amount;
+    if (refundType == 'full') {
+      amount = sale.total - sale.refundedAmount;
+    } else {
+      amount = double.tryParse(amountText.trim()) ?? 0;
+      if (amount <= 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Enter a valid refund amount'), backgroundColor: AppTheme.error),
+          );
+        }
+        return;
+      }
+      final remaining = sale.total - sale.refundedAmount;
+      if (amount > remaining) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Amount exceeds remaining ($currencySymbol${remaining.toStringAsFixed(2)})'), backgroundColor: AppTheme.error),
+          );
+        }
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _dbService.refundSale(
+        saleId: sale.id,
+        userId: _user!.id,
+        amount: amount,
+        reason: reason.isNotEmpty ? reason : null,
+        refundType: refundType,
+        refundedBy: widget.isStaffMode ? widget.staffName : 'owner',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Refund of $currencySymbol${amount.toStringAsFixed(2)} processed'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+      _loadData();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _showRefundDetails(Sale sale) async {
+    if (_user == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading refund details...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final refunds = await _dbService.getRefunds(_user!.id);
+      final saleRefunds = refunds.where((r) => r.saleId == sale.id).toList();
+
+      if (mounted) Navigator.pop(context);
+
+      if (saleRefunds.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No refund records found for this sale')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Refund Details'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Item: ${sale.item}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('Sale total: $currencySymbol${sale.total.toStringAsFixed(2)}'),
+                  Text('Refunded: $currencySymbol${sale.refundedAmount.toStringAsFixed(2)}'),
+                  Text('Net: $currencySymbol${sale.netTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const Divider(height: 24),
+                  ...saleRefunds.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              r.isFull ? Icons.undo : Icons.remove_circle_outline,
+                              size: 16,
+                              color: r.isFull ? AppTheme.error : AppTheme.warning,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${r.isFull ? "Full" : "Partial"} Refund',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Amount: $currencySymbol${r.amount.toStringAsFixed(2)}'),
+                        if (r.reason != null && r.reason!.isNotEmpty)
+                          Text('Reason: ${r.reason}'),
+                        if (r.refundedBy != null)
+                          Text('Processed by: ${r.refundedBy}'),
+                        Text(
+                          'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(r.refundedAt.toLocal())}',
+                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }

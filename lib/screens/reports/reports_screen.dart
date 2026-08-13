@@ -70,10 +70,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   double get grossSales => _sales.fold(0, (sum, s) => sum + (s.price * s.quantity));
   double get totalDiscounts => _sales.fold(0, (sum, s) => sum + s.discount);
+  double get totalRefunds => _sales.fold(0, (sum, s) => sum + s.refundedAmount);
   double get totalSales => _sales.fold(0, (sum, s) => sum + s.total);
+  double get netSales => totalSales - totalRefunds;
   double get totalCOGS => _sales.fold(0, (sum, s) => sum + (s.costPrice * s.quantity));
   double get totalExpenses => _expenses.fold(0, (sum, e) => sum + e.amount);
-  double get profit => totalSales - totalCOGS - totalExpenses;
+  double get profit => netSales - totalCOGS - totalExpenses;
 
   @override
   Widget build(BuildContext context) {
@@ -138,9 +140,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const SizedBox(height: 12),
               _buildSummaryCard(
                 'Net Sales',
-                '$currencySymbol${totalSales.toStringAsFixed(2)}',
+                '$currencySymbol${netSales.toStringAsFixed(2)}',
                 Icons.point_of_sale,
                 AppTheme.info,
+              ),
+              const SizedBox(height: 12),
+              _buildSummaryCard(
+                'Total Refunds',
+                '-$currencySymbol${totalRefunds.toStringAsFixed(2)}',
+                Icons.undo,
+                AppTheme.error,
               ),
               const SizedBox(height: 12),
               _buildSummaryCard(

@@ -479,6 +479,13 @@ class _HomeScreenState extends State<_HomeScreen> {
     final todaySalesList = await _dbService.getSales(user.id, startDate: today);
     final notifications = await _dbService.getNotifications(user.id);
 
+    double todayRefunds = 0;
+    double monthRefunds = 0;
+    try {
+      todayRefunds = await _dbService.getTotalRefunds(user.id, startDate: today);
+      monthRefunds = await _dbService.getTotalRefunds(user.id, startDate: monthStart);
+    } catch (_) {}
+
     List<Announcement> announcements = [];
     try {
       announcements = await _dbService.getAnnouncements(user.id);
@@ -487,8 +494,8 @@ class _HomeScreenState extends State<_HomeScreen> {
     setState(() {
       _user = user;
       _announcements = announcements;
-      _todaySales = todaySales;
-      _monthSales = monthSales;
+      _todaySales = todaySales - todayRefunds;
+      _monthSales = monthSales - monthRefunds;
       _inventoryCount = inventory.length;
       _inventoryValue = inventory.fold(0.0, (sum, item) => sum + (item.stock * item.sellingPrice));
       final now = DateTime.now();

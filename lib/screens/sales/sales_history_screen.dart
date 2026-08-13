@@ -541,8 +541,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 }
                 final reason = selectedReason == 'Other'
                     ? notesController.text.trim()
-                    : selectedReason;
-                if (selectedReason == 'Other' && reason.isEmpty) {
+                    : selectedReason!;
+                if (reason.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Please enter a custom reason'), backgroundColor: AppTheme.error),
                   );
@@ -718,3 +718,4 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       }
     }
   }
+}

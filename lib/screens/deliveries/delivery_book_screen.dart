@@ -644,21 +644,11 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Delivery Fee',
-                    style: TextStyle(fontSize: 13, color: Colors.grey)),
-                Text('\u20a6${riderCost.toStringAsFixed(0)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
             const Divider(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total',
+                const Text('Delivery Fee',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Text(

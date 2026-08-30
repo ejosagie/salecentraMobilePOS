@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/delivery_service.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
@@ -256,13 +257,17 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
       );
 
       if (result['success'] == true) {
+        final deliveryId = result['delivery_id'] as String?;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Delivery booked! Payment required to confirm.'),
+              content: Text('Delivery booked! Opening payment...'),
               backgroundColor: Colors.green,
             ),
           );
+          if (deliveryId != null) {
+            await _initiatePaymentForDelivery(deliveryId);
+          }
           widget.onBooked();
         }
       } else {
@@ -276,6 +281,41 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
       }
     } finally {
       if (mounted) setState(() => _isBooking = false);
+    }
+  }
+
+  Future<void> _initiatePaymentForDelivery(String deliveryId) async {
+    try {
+      final result = await DeliveryService.initiatePayment(
+        deliveryId: deliveryId,
+        email: widget.user.email,
+        customerName: widget.user.businessName,
+        customerPhone: widget.user.phoneNumber,
+      );
+      if (result['success'] == true) {
+        final paymentLink = result['payment_link'] as String?;
+        if (paymentLink != null) {
+          await launchUrl(Uri.parse(paymentLink),
+              mode: LaunchMode.externalApplication);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Payment opened in browser. Check your Active deliveries to verify payment after completing.'),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Delivery created but payment initiation failed. Pay from Active deliveries. Error: $e')),
+        );
+      }
     }
   }
 

@@ -333,7 +333,6 @@ class _DeliveryScreenState extends State<DeliveryScreen>
       );
       if (result['success'] == true) {
         final paymentLink = result['payment_link'] as String?;
-        final txRef = result['tx_ref'] as String?;
         if (paymentLink != null) {
           await launchUrl(Uri.parse(paymentLink),
               mode: LaunchMode.externalApplication);

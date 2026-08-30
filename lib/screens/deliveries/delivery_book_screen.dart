@@ -366,7 +366,7 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
                 Expanded(
                   child: Text(
                     _isGokada
-                        ? 'Gokada — Automated dispatch via Gokada API (Lagos only)'
+                        ? 'Gokada — Automated dispatch via Gokada (Lagos only)'
                         : 'SaleCentra Rider — A dispatch rider in $_selectedState will be assigned automatically.',
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -626,7 +626,7 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
   Widget _buildEstimateCard() {
     final customerFee = (_estimate!['customer_fee'] ?? 0).toDouble();
     final riderCost = (_estimate!['rider_cost'] ?? 0).toDouble();
-    final distance = _estimate!['distance_km'] ?? 0;
+    final distance = (_estimate!['distance_km'] ?? 0).toDouble();
 
     return Card(
       color: AppTheme.primaryColor.withOpacity(0.08),
@@ -651,16 +651,6 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
                 const Text('Delivery Fee',
                     style: TextStyle(fontSize: 13, color: Colors.grey)),
                 Text('\u20a6${riderCost.toStringAsFixed(0)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Service Fee',
-                    style: TextStyle(fontSize: 13, color: Colors.grey)),
-                Text('\u20a6${(customerFee - riderCost).toStringAsFixed(0)}',
                     style: const TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),

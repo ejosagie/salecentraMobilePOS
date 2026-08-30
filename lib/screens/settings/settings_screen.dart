@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/auth_service.dart';
 import '../../utils/theme.dart';
 import 'business_settings_screen.dart';
@@ -20,11 +21,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _subscriptionStatus = 'trial';
   int? _daysRemaining;
   DateTime? _endDate;
+  String _versionText = 'SaleCentra';
 
   @override
   void initState() {
     super.initState();
     _loadSubscriptionStatus();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _versionText = 'SaleCentra v${info.version}+${info.buildNumber}';
+    });
   }
 
   Future<void> _loadSubscriptionStatus() async {
@@ -254,7 +264,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'SaleCentra v1.0.20',
+                  '$_versionText',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textMuted,
                   ),

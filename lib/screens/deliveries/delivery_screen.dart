@@ -333,6 +333,7 @@ class _DeliveryScreenState extends State<DeliveryScreen>
       );
       if (result['success'] == true) {
         final paymentLink = result['payment_link'] as String?;
+        final txRef = result['tx_ref'] as String?;
         if (paymentLink != null) {
           await launchUrl(Uri.parse(paymentLink),
               mode: LaunchMode.externalApplication);
@@ -341,10 +342,11 @@ class _DeliveryScreenState extends State<DeliveryScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                  'Payment opened in browser. Return to the app after payment.'),
+                  'Payment opened in browser. Open the delivery to verify payment after completing.'),
               duration: Duration(seconds: 5),
             ),
           );
+          await _loadDeliveries();
         }
       }
     } catch (e) {

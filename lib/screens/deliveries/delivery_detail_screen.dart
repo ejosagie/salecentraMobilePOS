@@ -16,6 +16,8 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   Map<String, dynamic>? _delivery;
   bool _isLoading = true;
   bool _isCancelling = false;
+  bool _isVerifying = false;
+  String? _txRef;
 
   @override
   void initState() {
@@ -149,6 +151,26 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (_txRef != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isVerifying ? null : _verifyPayment,
+                    icon: _isVerifying
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.verified),
+                    label: const Text('Verify Payment'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ],
             if (isActive &&
                 ['pending_payment', 'confirmed'].contains(status)) ...[
@@ -276,6 +298,10 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
       );
       if (result['success'] == true) {
         final paymentLink = result['payment_link'] as String?;
+        final txRef = result['tx_ref'] as String?;
+        if (txRef != null) {
+          setState(() => _txRef = txRef);
+        }
         if (paymentLink != null) {
           await launchUrl(Uri.parse(paymentLink),
               mode: LaunchMode.externalApplication);
@@ -284,10 +310,11 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                  'Payment opened in browser. Return after payment to refresh status.'),
+                  'Payment opened in browser. Tap "Verify Payment" after completing payment.'),
               duration: Duration(seconds: 5),
             ),
           );
+          await _loadDelivery();
         }
       }
     } catch (e) {
@@ -296,6 +323,40 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
           SnackBar(content: Text('Payment failed: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _verifyPayment() async {
+    if (_txRef == null) return;
+    setState(() => _isVerifying = true);
+    try {
+      final result = await DeliveryService.verifyPayment(txRef: _txRef!);
+      if (result['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment verified! Delivery confirmed.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          await _loadDelivery();
+        }
+      } else {
+        final msg = result['message'] ?? result['error'] ?? 'Verification failed';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Verification failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
     }
   }
 

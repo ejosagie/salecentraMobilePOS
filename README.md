@@ -1,6 +1,8 @@
 # SaleCentra Flutter
 
-A Flutter mobile application for SaleCentra - Smart Sales & Business Management.
+A Flutter mobile application for SaleCentra — Smart Sales & Business Management.
+
+**Current Version: 1.1.6+33**
 
 ## Features
 
@@ -9,7 +11,8 @@ A Flutter mobile application for SaleCentra - Smart Sales & Business Management.
 - **Inventory Management**: Add, edit, and track stock levels
 - **Point of Sale (POS)**: Quick sales entry with cart functionality
 - **Staff Sales Entry**: Dedicated staff login mode for recording sales independently
-- **Sales History**: View and track all past sales transactions
+- **Premium Staff Settings**: Advanced staff management with role-based permissions
+- **Sales History**: View and track all past sales transactions with refund support
 - **Customer Management**: Store and manage customer information
 - **Expense Tracking**: Record and categorize business expenses
 - **Debt Management**: Track money owed to you and debts you owe
@@ -17,9 +20,17 @@ A Flutter mobile application for SaleCentra - Smart Sales & Business Management.
 - **Forecast**: Sales forecasting and projections
 - **Price Pilot**: Price comparison and optimization tools
 - **Reports**: View sales, expense, and business analytics
+- **My Online Shop**: Manage online store, products, and orders
+- **Deliveries**: Book and track deliveries with state-based provider selection
+  - Lagos → Gokada (automated dispatch via Gokada API)
+  - Other states → SaleCentra Rider (manual rider assigned automatically)
+  - Address search via Google Places API (no manual lat/lng entry)
+  - Flutterwave payment integration for delivery fees
+  - Active deliveries, history, and booking tabs
 - **Notifications**: In-app alerts and updates
 - **PDF Receipts**: Generate and share professional PDF receipts after each sale
-- **Settings**: Business settings, staff management, and app preferences
+- **Account Status**: Subscription and trial status management
+- **Settings**: Business settings, staff management, and app preferences with dynamic version display
 
 ## Getting Started
 
@@ -106,7 +117,14 @@ lib/
 │   ├── customer.dart
 │   ├── expense.dart
 │   ├── debt.dart
-│   └── invoice.dart
+│   ├── invoice.dart
+│   ├── notification.dart
+│   ├── announcement.dart
+│   ├── refund.dart
+│   ├── premium_staff.dart
+│   ├── shop_order.dart
+│   ├── shop_product.dart
+│   └── shop_settings.dart
 ├── screens/                           # UI screens
 │   ├── splash_screen.dart
 │   ├── onboarding/
@@ -135,20 +153,33 @@ lib/
 │   │   └── forecast_screen.dart
 │   ├── price_pilot/
 │   │   └── price_pilot_screen.dart
+│   ├── deliveries/
+│   │   ├── delivery_screen.dart
+│   │   ├── delivery_book_screen.dart
+│   │   └── delivery_detail_screen.dart
+│   ├── shop/
+│   │   └── shop_screen.dart
+│   ├── account/
+│   │   └── account_status_screen.dart
 │   ├── notifications/
 │   │   └── notifications_screen.dart
 │   ├── settings/
 │   │   ├── settings_screen.dart
 │   │   ├── business_settings_screen.dart
-│   │   └── staff_settings_screen.dart
+│   │   ├── staff_settings_screen.dart
+│   │   └── premium_staff_settings_screen.dart
 │   ├── more/
 │   │   └── more_screen.dart
 │   └── staff/
 │       └── staff_login_screen.dart
-├── services/                          # Business logic
+├── services/                          # Business logic & API
+│   ├── api_service.dart
 │   ├── auth_service.dart
+│   ├── database_service.dart
 │   ├── remote_database_service.dart
-│   └── pdf_service.dart
+│   ├── delivery_service.dart
+│   ├── pdf_service.dart
+│   └── update_service.dart
 ├── widgets/                           # Reusable widgets
 │   └── app_logo.dart
 └── utils/                             # Utilities
@@ -156,13 +187,23 @@ lib/
     └── constants.dart
 ```
 
+## API Integration
+
+The app communicates with the SaleCentra backend at `https://mysalecentra.com/api`:
+
+- **Auth**: Login, register, session management
+- **Sales**: CRUD operations, refunds, history
+- **Inventory**: Stock management
+- **Deliveries**: Provider listing, address search (Google Places), estimate, booking, payment (Flutterwave), tracking
+- **Shop**: Online store management, orders, products
+
 ## CI/CD
 
 ### Codemagic Workflow (`codemagic.yaml`)
 
-- **iOS Release**: Automatically builds signed IPA, increments build number, and submits to TestFlight
+- **iOS Release**: Automatically builds signed IPA, increments build number from App Store Connect, and submits to TestFlight
 - **Android Release**: Can be extended to build AAB and upload to Google Play
 
 ## License
 
-Copyright (c) 2024 SaleCentra
+Copyright (c) 2024-2026 SaleCentra

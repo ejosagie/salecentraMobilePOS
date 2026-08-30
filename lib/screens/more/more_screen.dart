@@ -180,7 +180,7 @@ class _MoreScreenState extends State<MoreScreen> {
               );
             },
           ),
-          
+
           const Divider(),
           
           // Settings section

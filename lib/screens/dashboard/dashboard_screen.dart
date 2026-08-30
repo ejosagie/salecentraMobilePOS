@@ -21,6 +21,7 @@ import '../sales/sales_history_screen.dart';
 import '../forecast/forecast_screen.dart';
 import '../price_pilot/price_pilot_screen.dart';
 import '../shop/shop_screen.dart';
+import '../deliveries/delivery_screen.dart';
 import '../../models/announcement.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -297,6 +298,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const ShopScreen()),
+                          );
+                        },
+                      ),
+                      _buildMenuGridItem(
+                        icon: Icons.local_shipping_outlined,
+                        label: 'Deliveries',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DeliveryScreen()),
                           );
                         },
                       ),

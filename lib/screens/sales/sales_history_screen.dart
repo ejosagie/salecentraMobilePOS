@@ -362,8 +362,18 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.receipt, color: AppTheme.primaryColor),
-                title: const Text('View Receipt'),
+                leading: Icon(Icons.print, color: AppTheme.primaryColor),
+                title: const Text('Print Receipt'),
+                subtitle: Text('${sale.item} - $currencySymbol${sale.total.toStringAsFixed(2)}'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _printReceipt(sale);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.share, color: AppTheme.primaryColor),
+                title: const Text('Share Receipt'),
                 subtitle: Text('${sale.item} - $currencySymbol${sale.total.toStringAsFixed(2)}'),
                 onTap: () {
                   Navigator.pop(context);
@@ -415,10 +425,23 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     );
   }
 
+  Future<void> _printReceipt(Sale sale) async {
+    if (_user == null) return;
+    try {
+      await PdfService.printThermalReceipt(sale, _user!);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _shareReceipt(Sale sale) async {
     if (_user == null) return;
     try {
-      await PdfService.generateAndShareReceipt(sale, _user!);
+      await PdfService.generateAndShareRichReceiptFromSale(sale, _user!);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

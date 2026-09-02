@@ -22,6 +22,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   List<Customer> _filteredCustomers = [];
   User? _user;
   bool _isLoading = true;
+  bool _showTopCustomers = false;
   final _searchController = TextEditingController();
 
   @override
@@ -80,10 +81,26 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   void _filterCustomers(String query) {
     setState(() {
-      _filteredCustomers = _customers
+      var results = _customers
           .where((c) => c.name.toLowerCase().contains(query.toLowerCase()) ||
               (c.phone?.toLowerCase().contains(query.toLowerCase()) ?? false))
           .toList();
+      if (_showTopCustomers) {
+        results.sort((a, b) => b.totalPurchases.compareTo(a.totalPurchases));
+      }
+      _filteredCustomers = results;
+    });
+  }
+
+  void _toggleTopCustomers() {
+    setState(() {
+      _showTopCustomers = !_showTopCustomers;
+      if (_showTopCustomers) {
+        _filteredCustomers = List.from(_customers)
+          ..sort((a, b) => b.totalPurchases.compareTo(a.totalPurchases));
+      } else {
+        _filteredCustomers = _customers;
+      }
     });
   }
 
@@ -153,6 +170,41 @@ class _CustomersScreenState extends State<CustomersScreen> {
               child: Row(
                 children: [
                   _buildSummaryChip('Total', _customers.length.toString()),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _toggleTopCustomers,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _showTopCustomers
+                            ? AppTheme.success.withOpacity(0.15)
+                            : AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: _showTopCustomers
+                            ? Border.all(color: AppTheme.success.withOpacity(0.3))
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _showTopCustomers ? Icons.emoji_events : Icons.leaderboard_outlined,
+                            size: 14,
+                            color: _showTopCustomers ? AppTheme.success : AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _showTopCustomers ? 'Top Customers' : 'Show Top',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _showTopCustomers ? AppTheme.success : AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -246,7 +298,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 ),
                                 isThreeLine: true,
                                 onTap: () => _showCustomerDialog(existing: customer),
-                                trailing: const Icon(Icons.edit_outlined, size: 20),
+                                trailing: _showTopCustomers && index < 3
+                                    ? Icon(
+                                        index == 0 ? Icons.emoji_events : Icons.star,
+                                        size: 20,
+                                        color: index == 0 ? Colors.amber : (index == 1 ? Colors.grey[400] : Colors.brown[300]),
+                                      )
+                                    : const Icon(Icons.edit_outlined, size: 20),
                               ),
                             );
                           },

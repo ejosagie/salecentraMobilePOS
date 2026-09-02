@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../../services/delivery_service.dart';
 import '../../utils/theme.dart';
 
@@ -52,10 +53,12 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
       final result = await DeliveryService.cancelDelivery(widget.deliveryId);
       if (result['success'] == true) {
         if (mounted) {
+          final warning = result['warning'];
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Delivery cancelled'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Text(warning != null ? warning : 'Delivery cancelled'),
+              backgroundColor: warning != null ? Colors.orange : Colors.green,
+              duration: warning != null ? const Duration(seconds: 5) : const Duration(seconds: 3),
             ),
           );
           Navigator.pop(context);
@@ -120,8 +123,12 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
               'Provider': d['provider'],
               'Customer Fee': '\u20a6${(d['customer_fee'] ?? 0).toStringAsFixed(0)}',
               'Status': _formatStatus(status),
-              'Created': d['created_at'],
+              'Created': _formatDate(d['created_at']),
             }),
+            if (d['pickup_otp'] != null && d['pickup_otp'].toString().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildOtpCard(d['pickup_otp'].toString()),
+            ],
             if (d['rider_name'] != null) ...[
               const SizedBox(height: 16),
               _buildInfoSection('Rider', {
@@ -172,8 +179,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                 const SizedBox(height: 12),
               ],
             ],
-            if (isActive &&
-                ['pending_payment', 'confirmed'].contains(status)) ...[
+            if (isActive) ...[
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -386,5 +392,70 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
       if (word.isEmpty) return word;
       return word[0].toUpperCase() + word.substring(1);
     }).join(' ');
+  }
+
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return 'N/A';
+    final dt = DateTime.tryParse(dateValue.toString());
+    if (dt == null) return dateValue.toString();
+    return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+  }
+
+  Widget _buildOtpCard(String otp) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.password, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Pickup OTP',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                otp,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 6,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Give this code to the rider for pickup verification',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -476,10 +476,27 @@ class _SalesScreenState extends State<SalesScreen> {
           ],
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () async {
+              if (_user == null || receiptId == null || saleDate == null || soldItems.isEmpty) return;
+              await PdfService.printThermalGroupedReceipt(
+                receiptId: receiptId,
+                date: saleDate,
+                items: soldItems,
+                user: _user!,
+                enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
+                customerName: customerName,
+                customerPhone: customerPhone,
+                customerAddress: customerAddress,
+              );
+            },
+            icon: const Icon(Icons.print),
+            label: const Text('Print'),
+          ),
           OutlinedButton.icon(
             onPressed: () async {
               if (_user == null || receiptId == null || saleDate == null || soldItems.isEmpty) return;
-              await PdfService.generateAndShareGroupedReceipt(
+              await PdfService.generateAndShareRichReceipt(
                 receiptId: receiptId,
                 date: saleDate,
                 items: soldItems,

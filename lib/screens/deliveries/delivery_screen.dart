@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../services/delivery_service.dart';
 import '../../utils/theme.dart';
@@ -283,6 +284,19 @@ class _DeliveryScreenState extends State<DeliveryScreen>
                 ],
               ),
               const Divider(height: 20),
+              if (delivery['created_at'] != null) ...[
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: AppTheme.textMuted),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(delivery['created_at']),
+                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -300,6 +314,32 @@ class _DeliveryScreenState extends State<DeliveryScreen>
                   ),
                 ],
               ),
+              if (isActive && delivery['pickup_otp'] != null && delivery['pickup_otp'].toString().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.password, size: 14, color: AppTheme.primaryColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'OTP: ${delivery['pickup_otp']}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (isActive && status == 'pending_payment') ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -383,5 +423,12 @@ class _DeliveryScreenState extends State<DeliveryScreen>
       if (word.isEmpty) return word;
       return word[0].toUpperCase() + word.substring(1);
     }).join(' ');
+  }
+
+  String _formatDate(dynamic dateValue) {
+    if (dateValue == null) return '';
+    final dt = DateTime.tryParse(dateValue.toString());
+    if (dt == null) return dateValue.toString();
+    return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
   }
 }

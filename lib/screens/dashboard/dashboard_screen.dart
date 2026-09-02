@@ -494,6 +494,11 @@ class _HomeScreenState extends State<_HomeScreen> {
     final todaySalesList = await _dbService.getSales(user.id, startDate: today);
     final notifications = await _dbService.getNotifications(user.id);
 
+    int unreadChatCount = 0;
+    try {
+      unreadChatCount = await ChatService.getUnreadCount(user.id);
+    } catch (_) {}
+
     double todayRefunds = 0;
     double monthRefunds = 0;
     try {
@@ -531,12 +536,7 @@ class _HomeScreenState extends State<_HomeScreen> {
       _todaySalesCount = todaySalesList.length;
       _customerCount = customers.length;
       _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
-      // Load unread chat count
-      try {
-        _unreadChatCount = await ChatService.getUnreadCount(user.id);
-      } catch (_) {
-        _unreadChatCount = 0;
-      }
+      _unreadChatCount = unreadChatCount;
       _receivables = debtSummary['owed_to_me'] ?? 0;
       _payables = debtSummary['i_owe'] ?? 0;
       _isLoading = false;

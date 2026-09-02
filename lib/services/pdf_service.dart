@@ -25,7 +25,7 @@ class PdfService {
   // 80mm thermal printer page format (~227pt wide)
   static final PdfPageFormat thermal80 = PdfPageFormat(
     80 * 72 / 25.4,       // width: ~227pt (80mm)
-        child: pw.Image(image, width: 50, height: 50, fit: pw.BoxFit.contain),
+    200 * 72 / 25.4,      // height: ~567pt (200mm roll)
     marginAll: 4 * 72 / 25.4,  // ~11pt margins (4mm)
   );
 

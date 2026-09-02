@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -12,6 +12,22 @@ import '../models/user.dart';
 
 class PdfService {
   static pw.Font? _notoFont;
+
+  // Thermal printer page format (58mm roll, ~164pt wide, 200mm tall)
+  // Using this instead of A4 prevents tiny text when the PrintService
+  // scales the PDF down to 384 dots for a 58mm thermal printer.
+  static final PdfPageFormat thermal58 = PdfPageFormat(
+    58 * 72 / 25.4,       // width: ~164pt (58mm)
+    200 * 72 / 25.4,      // height: ~567pt (200mm roll)
+    marginAll: 4 * 72 / 25.4,  // ~11pt margins (4mm)
+  );
+
+  // 80mm thermal printer page format (~227pt wide)
+  static final PdfPageFormat thermal80 = PdfPageFormat(
+    80 * 72 / 25.4,       // width: ~227pt (80mm)
+        child: pw.Image(image, width: 50, height: 50, fit: pw.BoxFit.contain),
+    marginAll: 4 * 72 / 25.4,  // ~11pt margins (4mm)
+  );
 
   static Future<void> _loadFont() async {
     if (_notoFont != null) return;
@@ -48,17 +64,17 @@ class PdfService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: thermal58,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Business header — logo + name + contact
+              // Business header â€” logo + name + contact
               if (logo != null) ...[logo, pw.SizedBox(height: 10)],
               pw.Center(
                 child: pw.Text(
                   user.businessName,
-                  style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
                 ),
               ),
               if (user.phoneNumber.isNotEmpty)
@@ -139,10 +155,10 @@ class PdfService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('TOTAL', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('TOTAL', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
                     '${user.currencySymbol}${sale.total.toStringAsFixed(2)}',
-                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
                   ),
                 ],
               ),
@@ -167,7 +183,7 @@ class PdfService {
               pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
-                  'Powered by SaleCentra — Smart. Simple. Complete.',
+                  'Powered by SaleCentra â€” Smart. Simple. Complete.',
                   style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),
@@ -210,15 +226,15 @@ class PdfService {
     final logo = _buildLogo(user);
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: thermal58,
         build: (pw.Context context) {
           return [
-            // Business header — logo + name + contact
+            // Business header â€” logo + name + contact
             if (logo != null) ...[logo, pw.SizedBox(height: 10)],
             pw.Center(
               child: pw.Text(
                 user.businessName,
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
               ),
             ),
             if (user.phoneNumber.isNotEmpty)
@@ -303,23 +319,23 @@ class PdfService {
                   decoration: pw.BoxDecoration(color: PdfColor.fromHex('#EFF6FF')),
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text('Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text('Discount', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     ),
                   ],
@@ -328,23 +344,23 @@ class PdfService {
                   (item) => pw.TableRow(
                     children: [
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text(item.itemName),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text(item.quantity.toString()),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text('${user.currencySymbol}${item.unitPrice.toStringAsFixed(2)}'),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text('${user.currencySymbol}${item.discount.toStringAsFixed(2)}'),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(6),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text('${user.currencySymbol}${item.totalPrice.toStringAsFixed(2)}'),
                       ),
                     ],
@@ -360,14 +376,14 @@ class PdfService {
                 pw.Text(
                   'TOTAL',
                   style: pw.TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
                 pw.Text(
                   '${user.currencySymbol}${total.toStringAsFixed(2)}',
                   style: pw.TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -394,7 +410,7 @@ class PdfService {
             pw.SizedBox(height: 16),
             pw.Center(
               child: pw.Text(
-                'Powered by SaleCentra — Smart. Simple. Complete.',
+                'Powered by SaleCentra â€” Smart. Simple. Complete.',
                 style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
               ),
             ),
@@ -431,7 +447,7 @@ class PdfService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Business header — logo + name + contact
+              // Business header â€” logo + name + contact
               if (invoiceLogo != null) ...[invoiceLogo, pw.SizedBox(height: 10)],
               pw.Center(
                 child: pw.Text(
@@ -525,7 +541,7 @@ class PdfService {
               pw.SizedBox(height: 16),
               pw.Center(
                 child: pw.Text(
-                  'Powered by SaleCentra — Smart. Simple. Complete.',
+                  'Powered by SaleCentra â€” Smart. Simple. Complete.',
                   style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#94A3B8')),
                 ),
               ),

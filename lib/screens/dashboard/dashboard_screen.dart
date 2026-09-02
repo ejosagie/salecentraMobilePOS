@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';
+import '../../services/chat_service.dart';
 import '../../models/user.dart';
 import '../../models/inventory.dart';
 import '../../utils/theme.dart';
@@ -22,6 +23,7 @@ import '../forecast/forecast_screen.dart';
 import '../price_pilot/price_pilot_screen.dart';
 import '../shop/shop_screen.dart';
 import '../deliveries/delivery_screen.dart';
+import '../chat/chat_list_screen.dart';
 import '../../models/announcement.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -414,6 +416,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   String _toCurrency = 'NGN';
   double _conversionAmount = 0;
   int _unreadNotificationCount = 0;
+  int _unreadChatCount = 0;
   bool _isLoading = true;
   List<Announcement> _announcements = [];
 
@@ -528,6 +531,12 @@ class _HomeScreenState extends State<_HomeScreen> {
       _todaySalesCount = todaySalesList.length;
       _customerCount = customers.length;
       _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
+      // Load unread chat count
+      try {
+        _unreadChatCount = await ChatService.getUnreadCount(user.id);
+      } catch (_) {
+        _unreadChatCount = 0;
+      }
       _receivables = debtSummary['owed_to_me'] ?? 0;
       _payables = debtSummary['i_owe'] ?? 0;
       _isLoading = false;
@@ -774,6 +783,32 @@ class _HomeScreenState extends State<_HomeScreen> {
               ),
             ),
             actions: [
+              IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.chat_bubble_outline),
+                    if (_unreadChatCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChatListScreen()),
+                  ).then((_) => _loadData());
+                },
+              ),
               IconButton(
                 icon: Stack(
                   children: [

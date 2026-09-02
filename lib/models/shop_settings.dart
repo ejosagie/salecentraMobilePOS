@@ -7,12 +7,15 @@ class ShopSettings {
   final String whatsappNumber;
   final String email;
   final String address;
+  final double? shopLat;
+  final double? shopLng;
   final String bankName;
   final String bankAccountName;
   final String bankAccountNumber;
   final String currency;
   final String currencySymbol;
   final String themeColor;
+  final String themeColorSecondary;
   final bool isActive;
   final bool shopEnabled;
   final String subscriptionStatus;
@@ -29,12 +32,15 @@ class ShopSettings {
     this.whatsappNumber = '',
     this.email = '',
     this.address = '',
+    this.shopLat,
+    this.shopLng,
     this.bankName = '',
     this.bankAccountName = '',
     this.bankAccountNumber = '',
     this.currency = 'XAF',
     this.currencySymbol = 'FCFA',
     this.themeColor = '#0066ff',
+    this.themeColorSecondary = '#f0f4ff',
     this.isActive = false,
     this.shopEnabled = false,
     this.subscriptionStatus = 'inactive',
@@ -69,12 +75,15 @@ class ShopSettings {
       whatsappNumber: (shop?['whatsapp_number'] as String?) ?? '',
       email: (shop?['email'] as String?) ?? '',
       address: (shop?['address'] as String?) ?? '',
+      shopLat: (shop?['shop_lat'] as num?)?.toDouble(),
+      shopLng: (shop?['shop_lng'] as num?)?.toDouble(),
       bankName: (shop?['bank_name'] as String?) ?? '',
       bankAccountName: (shop?['bank_account_name'] as String?) ?? '',
       bankAccountNumber: (shop?['bank_account_number'] as String?) ?? '',
       currency: (shop?['currency'] as String?) ?? 'XAF',
       currencySymbol: (shop?['currency_symbol'] as String?) ?? 'FCFA',
       themeColor: (map['shop_theme_color'] as String?) ?? '#0066ff',
+      themeColorSecondary: (map['shop_theme_color_secondary'] as String?) ?? '#f0f4ff',
       isActive: isActive,
       shopEnabled: shopEnabled,
       subscriptionStatus: (map['shop_subscription_status'] as String?) ?? 'inactive',
@@ -93,6 +102,8 @@ class ShopSettings {
       'whatsapp_number': whatsappNumber,
       'email': email,
       'address': address,
+      if (shopLat != null) 'shop_lat': shopLat,
+      if (shopLng != null) 'shop_lng': shopLng,
       'bank_name': bankName,
       'bank_account_name': bankAccountName,
       'bank_account_number': bankAccountNumber,
@@ -101,6 +112,7 @@ class ShopSettings {
       'is_active': isActive,
       'shop_enabled': shopEnabled,
       'theme_color': themeColor,
+      'theme_color_secondary': themeColorSecondary,
     };
   }
 
@@ -112,12 +124,15 @@ class ShopSettings {
     String? whatsappNumber,
     String? email,
     String? address,
+    double? shopLat,
+    double? shopLng,
     String? bankName,
     String? bankAccountName,
     String? bankAccountNumber,
     String? currency,
     String? currencySymbol,
     String? themeColor,
+    String? themeColorSecondary,
     bool? isActive,
     bool? shopEnabled,
     String? subscriptionStatus,
@@ -134,12 +149,15 @@ class ShopSettings {
       whatsappNumber: whatsappNumber ?? this.whatsappNumber,
       email: email ?? this.email,
       address: address ?? this.address,
+      shopLat: shopLat ?? this.shopLat,
+      shopLng: shopLng ?? this.shopLng,
       bankName: bankName ?? this.bankName,
       bankAccountName: bankAccountName ?? this.bankAccountName,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
       currency: currency ?? this.currency,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       themeColor: themeColor ?? this.themeColor,
+      themeColorSecondary: themeColorSecondary ?? this.themeColorSecondary,
       isActive: isActive ?? this.isActive,
       shopEnabled: shopEnabled ?? this.shopEnabled,
       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,

@@ -10,6 +10,8 @@ import '../../models/shop_order.dart';
 import '../../models/inventory.dart';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';
+import '../../services/delivery_service.dart';
+import '../reviews/reviews_screen.dart';
 import '../../utils/theme.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -80,7 +82,7 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Online Shop'),
@@ -92,6 +94,7 @@ class _ShopScreenState extends State<ShopScreen> {
               Tab(text: 'Products'),
               Tab(text: 'Subscription'),
               Tab(text: 'Orders'),
+              Tab(text: 'Reviews'),
               Tab(text: 'Preview'),
             ],
           ),
@@ -140,6 +143,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           dbService: _dbService,
                           onChanged: _loadData,
                         ),
+                        ReviewsScreen(shopSlug: _shopSettings!.slug),
                         _ShopPreviewTab(settings: _shopSettings!),
                       ],
                     ),
@@ -176,12 +180,16 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
   late TextEditingController _whatsappController;
   late TextEditingController _emailController;
   late TextEditingController _addressController;
+  List<Map<String, dynamic>> _addressResults = [];
+  Map<String, dynamic>? _selectedAddress;
+  bool _isSearchingAddress = false;
   late TextEditingController _bankNameController;
   late TextEditingController _bankAccountNameController;
   late TextEditingController _bankAccountNumberController;
   late TextEditingController _currencyController;
   late TextEditingController _currencySymbolController;
   late Color _themeColor;
+  late Color _themeColorSecondary;
   late bool _isActive;
   late bool _shopEnabled;
   bool _isSaving = false;
@@ -197,12 +205,16 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
     _whatsappController = TextEditingController(text: s.whatsappNumber);
     _emailController = TextEditingController(text: s.email);
     _addressController = TextEditingController(text: s.address);
+    if (s.shopLat != null && s.shopLng != null) {
+      _selectedAddress = {'address': s.address, 'latitude': s.shopLat, 'longitude': s.shopLng};
+    }
     _bankNameController = TextEditingController(text: s.bankName);
     _bankAccountNameController = TextEditingController(text: s.bankAccountName);
     _bankAccountNumberController = TextEditingController(text: s.bankAccountNumber);
     _currencyController = TextEditingController(text: s.currency);
     _currencySymbolController = TextEditingController(text: s.currencySymbol);
     _themeColor = _parseColor(s.themeColor);
+    _themeColorSecondary = _parseColor(s.themeColorSecondary);
     _isActive = s.isActive;
     _shopEnabled = s.shopEnabled;
   }
@@ -236,6 +248,40 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
     return '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
   }
 
+  Future<void> _searchAddress() async {
+    final query = _addressController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please type an address to search')),
+      );
+      return;
+    }
+    setState(() => _isSearchingAddress = true);
+    try {
+      final result = await DeliveryService.searchAddress(query);
+      if (result['success'] == true) {
+        final places = (result['places'] as List<dynamic>?)
+                ?.map((p) => p as Map<String, dynamic>)
+                .toList() ??
+            [];
+        setState(() {
+          _addressResults = places;
+          _selectedAddress = null;
+        });
+      } else {
+        throw Exception(result['error'] ?? 'Search failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Search failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSearchingAddress = false);
+    }
+  }
+
   Future<void> _save() async {
     setState(() => _isSaving = true);
     try {
@@ -247,12 +293,15 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
         whatsappNumber: _whatsappController.text.trim(),
         email: _emailController.text.trim(),
         address: _addressController.text.trim(),
+        shopLat: _selectedAddress?['latitude'] as double?,
+        shopLng: _selectedAddress?['longitude'] as double?,
         bankName: _bankNameController.text.trim(),
         bankAccountName: _bankAccountNameController.text.trim(),
         bankAccountNumber: _bankAccountNumberController.text.trim(),
         currency: _currencyController.text.trim(),
         currencySymbol: _currencySymbolController.text.trim(),
         themeColor: _colorToHex(_themeColor),
+        themeColorSecondary: _colorToHex(_themeColorSecondary),
         isActive: _isActive,
         shopEnabled: _shopEnabled,
       );
@@ -322,7 +371,100 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
           _buildField('Phone', _phoneController),
           _buildField('WhatsApp Number', _whatsappController),
           _buildField('Email', _emailController),
-          _buildField('Address', _addressController, maxLines: 2),
+          const SizedBox(height: 8),
+          // Address search
+          const Text('Business Address', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search business address...',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _isSearchingAddress ? null : _searchAddress,
+                icon: _isSearchingAddress
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search),
+              ),
+            ],
+          ),
+          if (_addressResults.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _addressResults.length,
+                itemBuilder: (context, index) {
+                  final place = _addressResults[index];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.location_on, size: 18),
+                    title: Text(
+                      place['address'] ?? '',
+                      style: const TextStyle(fontSize: 13),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _selectedAddress = place;
+                        _addressController.text = place['address'] ?? '';
+                        _addressResults = [];
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+          if (_selectedAddress != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _selectedAddress!['address'] ?? '',
+                      style: const TextStyle(fontSize: 13, color: Colors.green),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() => _selectedAddress = null);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const Text('Payment Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -342,16 +484,19 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
           const SizedBox(height: 16),
 
           // Theme color picker
-          const Text('Theme Color', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text('Theme Colors', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('Pick a primary and secondary color for your shop', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
+              // Primary color
               GestureDetector(
                 onTap: () async {
                   final color = await showDialog<Color>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Pick Theme Color'),
+                      title: const Text('Pick Primary Color'),
                       content: SingleChildScrollView(
                         child: ColorPicker(currentColor: _themeColor),
                       ),
@@ -369,8 +514,35 @@ class _ShopSettingsTabState extends State<_ShopSettingsTab> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text(_colorToHex(_themeColor), style: const TextStyle(color: AppTheme.textSecondary)),
+              const SizedBox(width: 8),
+              Text(_colorToHex(_themeColor), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              const SizedBox(width: 24),
+              // Secondary color
+              GestureDetector(
+                onTap: () async {
+                  final color = await showDialog<Color>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Pick Secondary Color'),
+                      content: SingleChildScrollView(
+                        child: ColorPicker(currentColor: _themeColorSecondary),
+                      ),
+                    ),
+                  );
+                  if (color != null) setState(() => _themeColorSecondary = color);
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: _themeColorSecondary,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(_colorToHex(_themeColorSecondary), style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 16),

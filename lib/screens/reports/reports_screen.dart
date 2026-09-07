@@ -117,6 +117,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             _loadData();
                           }
                         },
+                        selectedColor: AppTheme.primaryColor.withOpacity(0.15),
+                        labelStyle: TextStyle(
+                          color: isSelected ? AppTheme.primaryDark : AppTheme.textSecondary,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
                       ),
                     );
                   },

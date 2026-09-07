@@ -24,9 +24,9 @@ class UpdateService {
     }
   }
 
-  static Future<void> showUpdateDialogIfNeeded(BuildContext context) async {
+  static Future<bool> showUpdateDialogIfNeeded(BuildContext context) async {
     final updateInfo = await checkForUpdate();
-    if (updateInfo == null || !context.mounted) return;
+    if (updateInfo == null || !context.mounted) return true;
 
     final forceUpdate = updateInfo['force_update'] == true;
     final message = updateInfo['update_message'] ?? 'A new version is available.';
@@ -104,5 +104,7 @@ class UpdateService {
         ],
       ),
     );
+
+    return !forceUpdate;
   }
 }

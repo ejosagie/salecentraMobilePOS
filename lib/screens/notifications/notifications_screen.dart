@@ -3,6 +3,7 @@ import '../../models/notification.dart';
 import '../../services/auth_service.dart';
 import '../../services/remote_database_service.dart';
 import '../../utils/theme.dart';
+import '../shop/shop_screen.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -82,6 +83,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.point_of_sale_outlined;
       case 'customer':
         return Icons.person_outline;
+      case 'order':
+        return Icons.shopping_bag_outlined;
       default:
         return Icons.notifications_outlined;
     }
@@ -93,6 +96,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return AppTheme.success;
       case 'customer':
         return AppTheme.primaryColor;
+      case 'order':
+        return AppTheme.warning;
       default:
         return AppTheme.info;
     }
@@ -185,7 +190,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         shape: BoxShape.circle,
                                       ),
                                     ),
-                              onTap: () => _markRead(n, index),
+                              onTap: () {
+                                _markRead(n, index);
+                                if (n.type == 'order') {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const ShopScreen()),
+                                  );
+                                }
+                              },
                             ),
                           );
                         },

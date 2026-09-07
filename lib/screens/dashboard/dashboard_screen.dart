@@ -417,6 +417,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   double _conversionAmount = 0;
   int _unreadNotificationCount = 0;
   int _unreadChatCount = 0;
+  int _pendingOrdersCount = 0;
   bool _isLoading = true;
   List<Announcement> _announcements = [];
 
@@ -499,6 +500,12 @@ class _HomeScreenState extends State<_HomeScreen> {
       unreadChatCount = await ChatService.getUnreadCount(user.id);
     } catch (_) {}
 
+    int pendingOrdersCount = 0;
+    try {
+      final pendingOrders = await _dbService.getShopOrders(user.id, status: 'pending');
+      pendingOrdersCount = pendingOrders.length;
+    } catch (_) {}
+
     double todayRefunds = 0;
     double monthRefunds = 0;
     try {
@@ -537,6 +544,7 @@ class _HomeScreenState extends State<_HomeScreen> {
       _customerCount = customers.length;
       _unreadNotificationCount = notifications.where((n) => !n.isRead).length;
       _unreadChatCount = unreadChatCount;
+      _pendingOrdersCount = pendingOrdersCount;
       _receivables = debtSummary['owed_to_me'] ?? 0;
       _payables = debtSummary['i_owe'] ?? 0;
       _isLoading = false;
@@ -813,7 +821,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                 icon: Stack(
                   children: [
                     const Icon(Icons.notifications_outlined),
-                    if (_unreadNotificationCount > 0)
+                    if (_unreadNotificationCount > 0 || _pendingOrdersCount > 0)
                       Positioned(
                         right: 0,
                         top: 0,
@@ -832,7 +840,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                  );
+                  ).then((_) => _loadData());
                 },
               ),
               IconButton(
@@ -861,6 +869,11 @@ class _HomeScreenState extends State<_HomeScreen> {
                 // Today's sales card
                 _buildSalesCard(),
                 const SizedBox(height: 16),
+                // Pending online orders alert
+                if (_pendingOrdersCount > 0) ...[
+                  _buildPendingOrdersCard(),
+                  const SizedBox(height: 16),
+                ],
                 // Quick stats
                 _buildStatsGrid(),
                 const SizedBox(height: 24),
@@ -1258,6 +1271,61 @@ class _HomeScreenState extends State<_HomeScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingOrdersCard() {
+    return Card(
+      color: AppTheme.warning.withOpacity(0.1),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ShopScreen()),
+          ).then((_) => _loadData());
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.shopping_bag, color: AppTheme.warning, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$_pendingOrdersCount Pending Online Order${_pendingOrdersCount == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppTheme.warning,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to review and process pending customer orders',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: AppTheme.warning),
+            ],
+          ),
         ),
       ),
     );

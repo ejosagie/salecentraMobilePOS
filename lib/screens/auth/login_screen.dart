@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
+import '../../services/update_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/app_logo.dart';
@@ -70,9 +71,17 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
           );
         } else if (user.onboardingComplete) {
-          Navigator.pushReplacementNamed(context, '/dashboard');
+          final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
+          if (!mounted) return;
+          if (canContinue) {
+            Navigator.pushReplacementNamed(context, '/dashboard');
+          }
         } else {
-          Navigator.pushReplacementNamed(context, '/onboarding');
+          final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
+          if (!mounted) return;
+          if (canContinue) {
+            Navigator.pushReplacementNamed(context, '/onboarding');
+          }
         }
       }
     } catch (e) {

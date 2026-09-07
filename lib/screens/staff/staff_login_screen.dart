@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
+import '../../services/update_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/theme.dart';
 import '../../widgets/app_logo.dart';
@@ -56,7 +57,11 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
       );
       
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
+        if (!mounted) return;
+        if (canContinue) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       }
     } catch (e) {
       if (mounted) {

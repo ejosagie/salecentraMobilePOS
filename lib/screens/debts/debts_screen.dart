@@ -14,15 +14,16 @@ class DebtsScreen extends StatefulWidget {
   State<DebtsScreen> createState() => _DebtsScreenState();
 }
 
-class _DebtsScreenState extends State<DebtsScreen> {
+class _DebtsScreenState extends State<DebtsScreen>
+    with SingleTickerProviderStateMixin {
   final _dbService = RemoteDatabaseService();
   final _authService = AuthService();
   final _uuid = Uuid();
   
-  List<Debt> _debts = [];
+  late TabController _tabController;
+  List<Debt> _allDebts = [];
   User? _user;
   bool _isLoading = true;
-  String _selectedTab = 'all';
   final Map<String, bool> _expandedPayments = {};
   final Map<String, List<DebtPayment>> _paymentHistory = {};
   final Map<String, bool> _loadingPayments = {};
@@ -30,7 +31,18 @@ class _DebtsScreenState extends State<DebtsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() {});
+    });
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -40,16 +52,11 @@ class _DebtsScreenState extends State<DebtsScreen> {
       return;
     }
 
-    String? type;
-    if (_selectedTab == 'owed') type = 'receivable';
-    if (_selectedTab == 'owe') type = 'payable';
-
-    final debts = await _dbService.getDebts(user.id, type: type);
-    await _dbService.getDebtSummary(user.id);
+    final debts = await _dbService.getDebts(user.id);
 
     setState(() {
       _user = user;
-      _debts = debts;
+      _allDebts = debts;
       _isLoading = false;
     });
   }
@@ -189,19 +196,11 @@ class _DebtsScreenState extends State<DebtsScreen> {
       );
     }
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: const Text('Debts'),
           bottom: TabBar(
-            onTap: (index) {
-              setState(() {
-                _selectedTab = ['all', 'owed', 'owe'][index];
-                _isLoading = true;
-              });
-              _loadData();
-            },
+            controller: _tabController,
             tabs: const [
               Tab(text: 'All'),
               Tab(text: 'Owed to Me'),
@@ -209,35 +208,53 @@ class _DebtsScreenState extends State<DebtsScreen> {
             ],
           ),
         ),
-        body: _debts.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 64, color: AppTheme.textMuted.withOpacity(0.5)),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No debts recorded',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _showAddDebtDialog,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Debt'),
-                    ),
-                  ],
-                ),
-              )
-            : RefreshIndicator(
-                onRefresh: _loadData,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _debts.length,
-                  itemBuilder: (context, index) {
-                    final debt = _debts[index];
+        body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildDebtList(_allDebts),
+                  _buildDebtList(_allDebts.where((d) => d.type == 'receivable').toList()),
+                  _buildDebtList(_allDebts.where((d) => d.type == 'payable').toList()),
+                ],
+              ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _showAddDebtDialog,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Debt'),
+        ),
+    );
+  }
+
+  Widget _buildDebtList(List<Debt> debts) {
+    if (debts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_balance_wallet_outlined, size: 64, color: AppTheme.textMuted.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(
+              'No debts recorded',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showAddDebtDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Debt'),
+            ),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: debts.length,
+        itemBuilder: (context, index) {
+          final debt = debts[index];
                     final isReceivable = debt.type == 'receivable';
                     final isOverdue = debt.isOverdue;
 
@@ -272,15 +289,32 @@ class _DebtsScreenState extends State<DebtsScreen> {
                                     margin: const EdgeInsets.only(left: 8),
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.textMuted.withOpacity(0.1),
+                                      color: AppTheme.success.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Text(
                                       'Paid',
                                       style: TextStyle(
                                         fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.success,
+                                      ),
+                                    ),
+                                  ),
+                                if (debt.status == 'partial')
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.warning.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'Partially Paid',
+                                      style: TextStyle(
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w500,
-                                        color: AppTheme.textMuted,
+                                        color: AppTheme.warning,
                                       ),
                                     ),
                                   ),
@@ -381,7 +415,6 @@ class _DebtsScreenState extends State<DebtsScreen> {
           icon: const Icon(Icons.add),
           label: const Text('Add Debt'),
         ),
-      ),
     );
   }
 }

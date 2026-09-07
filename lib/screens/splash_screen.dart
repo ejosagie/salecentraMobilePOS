@@ -60,13 +60,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
         );
       } else if (user != null && user.onboardingComplete) {
-        await UpdateService.showUpdateDialogIfNeeded(context);
+        final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (canContinue) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       } else if (user != null) {
-        await UpdateService.showUpdateDialogIfNeeded(context);
+        final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/onboarding');
+        if (canContinue) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
       } else {
         Navigator.pushReplacementNamed(context, '/login');
       }

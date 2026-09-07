@@ -409,13 +409,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
                   },
                 ),
-              ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _showAddDebtDialog,
-          icon: const Icon(Icons.add),
-          label: const Text('Add Debt'),
-        ),
-    );
+      );
   }
 }
 

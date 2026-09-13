@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/pdf_service.dart';
+import '../../services/thermal_printer_service.dart';
 import '../../models/customer.dart';
 import '../../models/inventory.dart';
 import '../../models/sale.dart';
@@ -420,6 +421,13 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       if (mounted) {
+        // Auto-print on Sunmi thermal printer
+        _printSunmiReceipt(
+          receiptId: receiptId,
+          items: _lastCompletedSaleItems,
+          customerName: customerName.isNotEmpty ? customerName : null,
+          customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
+        );
         _showReceiptDialog(
           customerName: customerName.isNotEmpty ? customerName : null,
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
@@ -438,6 +446,38 @@ class _SalesScreenState extends State<SalesScreen> {
         _loadData();
       }
     }
+  }
+
+  Future<void> _printSunmiReceipt({
+    required String? receiptId,
+    required List<CartItem> items,
+    String? customerName,
+    String? customerPhone,
+  }) async {
+    if (_user == null || receiptId == null) return;
+    final subtotal = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+    final discount = items.fold(0.0, (sum, item) => sum + item.discount);
+    final total = subtotal;
+
+    final thermalItems = items.map((item) => {
+      'name': item.itemName,
+      'quantity': item.quantity,
+      'price': item.unitPrice,
+    }).toList();
+
+    await ThermalPrinterService.printReceipt(
+      businessName: _user!.businessName,
+      address: _user!.businessAddress,
+      phone: _user!.phoneNumber,
+      receiptNo: receiptId.substring(0, 8).toUpperCase(),
+      cashier: widget.isStaffMode ? (widget.staffName ?? 'POS') : 'Owner',
+      items: thermalItems,
+      subtotal: subtotal,
+      discount: discount,
+      total: total,
+      customerName: customerName,
+      customerPhone: customerPhone,
+    );
   }
 
   void _showReceiptDialog({
@@ -492,6 +532,18 @@ class _SalesScreenState extends State<SalesScreen> {
             },
             icon: const Icon(Icons.print),
             label: const Text('Print'),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              _printSunmiReceipt(
+                receiptId: receiptId,
+                items: soldItems,
+                customerName: customerName,
+                customerPhone: customerPhone,
+              );
+            },
+            icon: const Icon(Icons.receipt_outlined),
+            label: const Text('Reprint (POS)'),
           ),
           OutlinedButton.icon(
             onPressed: () async {

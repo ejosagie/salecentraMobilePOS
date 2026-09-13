@@ -1,7 +1,7 @@
-name: salecentra_wave
-description: SaleCentra Flutter - Smart Sales & Business Management
+name: salecentra_sunmi
+description: SaleCentra POS - Smart Sales & Business Management for Sunmi Devices
 publish_to: 'none'
-version: 1.2.2+39
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -35,6 +35,12 @@ dependencies:
   printing: ^5.11.1
   change_app_package_name: ^1.5.0
   package_info_plus: ^8.0.0
+  # Sunmi-specific packages
+  sunmi_printer_plus: ^1.0.3
+  connectivity_plus: ^5.0.2
+  wakelock_plus: ^1.2.5
+  flutter_secure_storage: ^9.0.0
+  flutter_beep: ^1.0.0
 
 dev_dependencies:
   flutter_test:

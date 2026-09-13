@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../services/update_service.dart';
 import '../utils/theme.dart';
 import '../widgets/app_logo.dart';
-import 'account/account_status_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -46,34 +44,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _checkAuth() async {
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (!mounted) return;
 
     final authService = AuthService();
     final isLoggedIn = await authService.isLoggedIn();
 
     if (isLoggedIn) {
-      final user = await authService.getCurrentUser();
-      if (user != null && user.isAccessBlocked) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => AccountStatusScreen(user: user)),
-        );
-      } else if (user != null && user.onboardingComplete) {
-        final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
-        if (!mounted) return;
-        if (canContinue) {
-          Navigator.pushReplacementNamed(context, '/dashboard');
-        }
-      } else if (user != null) {
-        final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
-        if (!mounted) return;
-        if (canContinue) {
-          Navigator.pushReplacementNamed(context, '/onboarding');
-        }
-      } else {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -95,6 +73,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const AppLogo(size: 120),
+                    const SizedBox(height: 16),
+                    Text(
+                      'SaleCentra POS',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
+                    ),
                     const SizedBox(height: 48),
                     const SizedBox(
                       width: 40,

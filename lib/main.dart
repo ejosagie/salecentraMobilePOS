@@ -2,15 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'utils/theme.dart';
 import 'screens/splash_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/register_screen.dart';
+import 'screens/auth/pos_login_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
-import 'screens/onboarding/onboarding_screen.dart';
-import 'screens/forecast/forecast_screen.dart';
-import 'screens/price_pilot/price_pilot_screen.dart';
-import 'screens/sales/sales_history_screen.dart';
-import 'screens/settings/settings_screen.dart';
-import 'screens/staff/staff_login_screen.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -65,21 +58,14 @@ class _SaleCentraAppState extends State<SaleCentraApp> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SaleCentra',
+      title: 'SaleCentra POS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: _navigatorKey,
       home: const SplashScreen(),
       routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
+        '/login': (context) => const PosLoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/forecast': (context) => const ForecastScreen(),
-        '/price-pilot': (context) => const PricePilotScreen(),
-        '/sales-history': (context) => const SalesHistoryScreen(),
-        '/settings': (context) => const SettingsScreen(),
-        '/staff-login': (context) => const StaffLoginScreen(),
       },
     );
   }

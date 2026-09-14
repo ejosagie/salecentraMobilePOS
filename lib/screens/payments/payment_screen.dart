@@ -143,7 +143,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
           ElevatedButton.icon(
             onPressed: () async {
-              await launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+              await launchUrl(Uri.parse(link), mode: LaunchMode.inAppBrowserView);
             },
             icon: const Icon(Icons.open_in_browser),
             label: const Text('Open'),
@@ -295,7 +295,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     onPressed: () async {
                       final url = link['payment_link'] as String?;
                       if (url != null) {
-                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
                       }
                     },
                   ),

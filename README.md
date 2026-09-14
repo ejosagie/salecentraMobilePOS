@@ -8,7 +8,7 @@ A Flutter POS application for SaleCentra — built specifically for Sunmi Androi
 
 - **Combined Login**: Business owner (email + password) and staff (email + staff name + passcode) login
 - **POS Activation**: Admin-controlled POS activation per merchant with terminal registration
-- **Minimal Dashboard**: 7-item menu — Sales, History, Inventory, Deliver, Returns, Payment, Settings
+- **Minimal Dashboard**: 6-item menu — Sales, History, Inventory, Deliver, Returns, Payment (Settings + Notifications in AppBar)
 - **Thermal Printing**: 58mm receipt printing via Sunmi built-in printer (auto-print after sale + reprint)
 - **Offline Support**: Up to 3 days offline operation with cached session and connectivity indicator
 - **Sales**: Cart-based sales entry with discounts, cash/bank transfer payment, thermal receipt

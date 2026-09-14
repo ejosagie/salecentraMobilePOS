@@ -8,6 +8,7 @@ import '../sales/sales_history_screen.dart';
 import '../sales/returns_screen.dart';
 import '../deliveries/delivery_screen.dart';
 import '../payments/payment_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../settings/bank_details_screen.dart';
 import '../../widgets/connection_status_indicator.dart';
 
@@ -67,7 +68,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           const ConnectionStatusIndicator(isOnline: true),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const NotificationsScreen(),
+              ));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => BankDetailsScreen(userId: _userId ?? ''),
+              ));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
@@ -146,16 +163,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(
                       builder: (_) => const PaymentScreen(),
-                    ));
-                  },
-                ),
-                _PosMenuItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                  color: AppTheme.textSecondary,
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => BankDetailsScreen(userId: _userId ?? ''),
                     ));
                   },
                 ),

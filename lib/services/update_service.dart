@@ -6,11 +6,14 @@ import 'api_service.dart';
 import '../utils/theme.dart';
 
 class UpdateService {
+  static const _appId = 'salecentra_pos';
+
   static Future<Map<String, dynamic>?> checkForUpdate() async {
     try {
       final info = await PackageInfo.fromPlatform();
       final platform = Platform.isIOS ? 'ios' : 'android';
       final response = await ApiService.get('/app-update/check', params: {
+        'app_id': _appId,
         'platform': platform,
         'version': info.version,
         'build_number': info.buildNumber,
@@ -89,11 +92,7 @@ class UpdateService {
               if (storeUrl.isNotEmpty) {
                 await launchUrl(Uri.parse(storeUrl));
               } else {
-                if (Platform.isIOS) {
-                  await launchUrl(Uri.parse('https://apps.apple.com/app/salecentra/id6774866098'));
-                } else {
-                  await launchUrl(Uri.parse('https://play.google.com/store/apps/details?id=com.neurowavesds.salecentra'));
-                }
+                await launchUrl(Uri.parse('https://mysalecentra.com/downloads/salecentra-pos.apk'));
               }
               if (!forceUpdate && context.mounted) {
                 Navigator.pop(context);

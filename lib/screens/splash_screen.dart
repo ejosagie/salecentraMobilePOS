@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/update_service.dart';
 import '../utils/theme.dart';
 import '../widgets/app_logo.dart';
 
@@ -51,7 +52,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final isLoggedIn = await authService.isLoggedIn();
 
     if (isLoggedIn) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      final canContinue = await UpdateService.showUpdateDialogIfNeeded(context);
+      if (!mounted) return;
+      if (canContinue) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }

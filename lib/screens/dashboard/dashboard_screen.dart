@@ -5,7 +5,9 @@ import '../../utils/theme.dart';
 import '../inventory/inventory_screen.dart';
 import '../sales/sales_screen.dart';
 import '../sales/sales_history_screen.dart';
+import '../sales/returns_screen.dart';
 import '../deliveries/delivery_screen.dart';
+import '../payments/payment_screen.dart';
 import '../settings/bank_details_screen.dart';
 import '../../widgets/connection_status_indicator.dart';
 
@@ -109,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 _PosMenuItem(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Stock',
+                  label: 'Inventory',
                   color: AppTheme.success,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(
@@ -119,11 +121,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 _PosMenuItem(
                   icon: Icons.local_shipping_outlined,
-                  label: 'Deliver/Returns',
+                  label: 'Deliver',
                   color: AppTheme.warning,
                   onTap: () {
                     Navigator.push(context, MaterialPageRoute(
                       builder: (_) => const DeliveryScreen(),
+                    ));
+                  },
+                ),
+                _PosMenuItem(
+                  icon: Icons.undo,
+                  label: 'Returns',
+                  color: Colors.red,
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => const ReturnsScreen(),
+                    ));
+                  },
+                ),
+                _PosMenuItem(
+                  icon: Icons.payment,
+                  label: 'Payment',
+                  color: Colors.deepPurple,
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => const PaymentScreen(),
                     ));
                   },
                 ),

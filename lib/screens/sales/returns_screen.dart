@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/database_service.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/thermal_printer_service.dart';
 import '../../models/sale.dart';
+import '../../models/user.dart';
 import '../../utils/theme.dart';
 
 class ReturnsScreen extends StatefulWidget {
@@ -13,13 +14,13 @@ class ReturnsScreen extends StatefulWidget {
 }
 
 class _ReturnsScreenState extends State<ReturnsScreen> {
-  final _dbService = DatabaseService();
   final _remoteService = RemoteDatabaseService();
   final _authService = AuthService();
   List<Sale> _recentSales = [];
   bool _isLoading = true;
   String? _userId;
   String _currencySymbol = '₦';
+  User? _user;
 
   @override
   void initState() {
@@ -32,14 +33,15 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
     try {
       final user = await _authService.getCurrentUser();
       _userId = user?.id;
+      _user = user;
       if (user != null) {
         _currencySymbol = user.currencySymbol;
+        final allSales = await _remoteService.getSales(user.id);
+        setState(() {
+          _recentSales = allSales.where((s) => !s.isFullyRefunded).take(50).toList();
+          _isLoading = false;
+        });
       }
-      final allSales = await _dbService.getSales(_userId!);
-      setState(() {
-        _recentSales = allSales.where((s) => !s.isFullyRefunded).take(50).toList();
-        _isLoading = false;
-      });
     } catch (e) {
       setState(() => _isLoading = false);
     }
@@ -54,7 +56,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Process Return'),
+          title: const Text('Process Return / Refund'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -136,8 +138,25 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
         refundedBy: 'POS',
       );
       if (mounted) {
+        final staffName = await _authService.getStaffName();
+        // Print refund receipt on thermal printer
+        await ThermalPrinterService.printReceipt(
+          businessName: _user?.businessName ?? '',
+          address: _user?.businessAddress ?? '',
+          phone: _user?.phoneNumber ?? '',
+          receiptNo: 'REF-${sale.id.substring(0, 8).toUpperCase()}',
+          cashier: staffName ?? 'Owner',
+          items: [
+            {'name': 'REFUND: ${sale.item}', 'quantity': sale.quantity, 'price': -result['amount']},
+          ],
+          subtotal: -result['amount'],
+          discount: 0,
+          total: -result['amount'],
+          paymentMethod: 'Refund',
+          paymentStatus: result['type'] == 'full' ? 'Full Refund' : 'Partial Refund',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Return processed successfully'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Return processed successfully — refund receipt printed'), backgroundColor: Colors.green),
         );
         _loadData();
       }

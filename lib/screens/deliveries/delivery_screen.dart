@@ -7,6 +7,7 @@ import '../../utils/theme.dart';
 import '../../models/user.dart';
 import 'delivery_book_screen.dart';
 import 'delivery_detail_screen.dart';
+import '../sales/returns_screen.dart';
 
 class DeliveryScreen extends StatefulWidget {
   const DeliveryScreen({super.key});
@@ -29,7 +30,7 @@ class _DeliveryScreenState extends State<DeliveryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadUser();
   }
 
@@ -102,13 +103,14 @@ class _DeliveryScreenState extends State<DeliveryScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deliveries'),
+        title: const Text('Deliveries / Returns'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'Active'),
             Tab(text: 'History'),
             Tab(text: 'Book New'),
+            Tab(text: 'Returns'),
           ],
         ),
       ),
@@ -124,6 +126,7 @@ class _DeliveryScreenState extends State<DeliveryScreen>
               _tabController.animateTo(0);
             },
           ),
+          const ReturnsScreen(),
         ],
       ),
     );

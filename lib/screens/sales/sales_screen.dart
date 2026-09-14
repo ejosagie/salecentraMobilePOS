@@ -4,6 +4,8 @@ import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/pdf_service.dart';
 import '../../services/thermal_printer_service.dart';
+import '../../services/offline_sync_service.dart';
+import '../../services/offline_service.dart';
 import '../../models/customer.dart';
 import '../../models/inventory.dart';
 import '../../models/sale.dart';
@@ -31,6 +33,7 @@ class _SalesScreenState extends State<SalesScreen> {
   final _dbService = RemoteDatabaseService();
   final _authService = AuthService();
   final _uuid = Uuid();
+  final _offlineSync = OfflineSyncService();
   
   User? _user;
   List<InventoryItem> _inventory = [];
@@ -73,7 +76,7 @@ class _SalesScreenState extends State<SalesScreen> {
     final user = await _authService.getCurrentUser();
     if (user == null) return;
 
-    final inventory = await _dbService.getInventory(user.id);
+    final inventory = await _offlineSync.getInventoryWithFallback(user.id);
 
     setState(() {
       _user = user;
@@ -394,6 +397,8 @@ class _SalesScreenState extends State<SalesScreen> {
       final customerPhone = _customerPhoneController.text.trim();
       final customerAddress = _customerAddressController.text.trim();
       
+      bool hadOfflineSale = false;
+      
       for (final cartItem in _cart) {
         // Record sale
         final sale = Sale(
@@ -413,11 +418,34 @@ class _SalesScreenState extends State<SalesScreen> {
           customerAddress: customerAddress.isNotEmpty ? customerAddress : null,
         );
 
-        await _dbService.recordSale(sale);
-
-        // Update inventory
         final newStock = cartItem.inventoryItem.stock - cartItem.quantity;
-        await _dbService.updateStock(cartItem.inventoryItem.id, newStock);
+
+        try {
+          await _dbService.recordSale(sale);
+          // Update inventory
+          await _dbService.updateStock(cartItem.inventoryItem.id, newStock);
+        } catch (e) {
+          // Network failed — save offline for later sync
+          hadOfflineSale = true;
+          await _offlineSync.saveOfflineSale(
+            saleId: sale.id,
+            userId: sale.userId,
+            date: sale.date,
+            item: sale.item,
+            quantity: sale.quantity,
+            price: sale.price,
+            discount: sale.discount,
+            total: sale.total,
+            costPrice: sale.costPrice,
+            enteredByStaffName: sale.enteredByStaffName,
+            entryMode: sale.entryMode,
+            customerName: sale.customerName,
+            customerPhone: sale.customerPhone,
+            customerAddress: sale.customerAddress,
+            inventoryItemId: cartItem.inventoryItem.id,
+            newStock: newStock,
+          );
+        }
       }
 
       if (mounted) {
@@ -433,6 +461,15 @@ class _SalesScreenState extends State<SalesScreen> {
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
           customerAddress: customerAddress.isNotEmpty ? customerAddress : null,
         );
+        if (hadOfflineSale) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sale saved offline. It will sync automatically when back online.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       _showError('Error completing sale: $e');

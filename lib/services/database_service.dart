@@ -29,8 +29,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -194,6 +195,83 @@ class DatabaseService {
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     ''');
+
+    // Offline sales table (queued for sync)
+    await db.execute('''
+      CREATE TABLE offline_sales (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        date TEXT,
+        item TEXT,
+        quantity INTEGER,
+        price REAL,
+        discount REAL,
+        total REAL,
+        cost_price REAL,
+        entered_by_staff_name TEXT,
+        entry_mode TEXT DEFAULT 'owner',
+        customer_name TEXT,
+        customer_phone TEXT,
+        customer_address TEXT,
+        inventory_item_id TEXT,
+        new_stock INTEGER,
+        synced INTEGER DEFAULT 0,
+        created_at TEXT
+      )
+    ''');
+
+    // Cached inventory table (for offline viewing)
+    await db.execute('''
+      CREATE TABLE cached_inventory (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        item TEXT,
+        stock INTEGER,
+        cost_price REAL,
+        selling_price REAL,
+        expiry_date TEXT,
+        cached_at TEXT
+      )
+    ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS offline_sales (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          date TEXT,
+          item TEXT,
+          quantity INTEGER,
+          price REAL,
+          discount REAL,
+          total REAL,
+          cost_price REAL,
+          entered_by_staff_name TEXT,
+          entry_mode TEXT DEFAULT 'owner',
+          customer_name TEXT,
+          customer_phone TEXT,
+          customer_address TEXT,
+          inventory_item_id TEXT,
+          new_stock INTEGER,
+          synced INTEGER DEFAULT 0,
+          created_at TEXT
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS cached_inventory (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          item TEXT,
+          stock INTEGER,
+          cost_price REAL,
+          selling_price REAL,
+          expiry_date TEXT,
+          cached_at TEXT
+        )
+      ''');
+    }
   }
 
   // User operations
@@ -510,6 +588,72 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [invoiceId],
     );
+  }
+
+  // ==================== OFFLINE SALES ====================
+
+  Future<void> saveOfflineSale(Map<String, dynamic> saleData) async {
+    final db = await database;
+    await db.insert('offline_sales', {
+      ...saleData,
+      'synced': 0,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedOfflineSales() async {
+    final db = await database;
+    return await db.query('offline_sales', where: 'synced = 0');
+  }
+
+  Future<int> getUnsyncedCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM offline_sales WHERE synced = 0');
+    return result.first['count'] as int;
+  }
+
+  Future<void> markOfflineSaleSynced(String id) async {
+    final db = await database;
+    await db.update('offline_sales', {'synced': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> clearSyncedOfflineSales() async {
+    final db = await database;
+    await db.delete('offline_sales', where: 'synced = 1');
+  }
+
+  // ==================== CACHED INVENTORY ====================
+
+  Future<void> cacheInventory(List<InventoryItem> items, String userId) async {
+    final db = await database;
+    await db.delete('cached_inventory', where: 'user_id = ?', whereArgs: [userId]);
+    final now = DateTime.now().toIso8601String();
+    for (final item in items) {
+      await db.insert('cached_inventory', {
+        'id': item.id,
+        'user_id': userId,
+        'item': item.item,
+        'stock': item.stock,
+        'cost_price': item.costPrice,
+        'selling_price': item.sellingPrice,
+        'expiry_date': item.expiryDate,
+        'cached_at': now,
+      });
+    }
+  }
+
+  Future<List<InventoryItem>> getCachedInventory(String userId) async {
+    final db = await database;
+    final maps = await db.query('cached_inventory', where: 'user_id = ?', whereArgs: [userId]);
+    return maps.map((m) => InventoryItem(
+      id: m['id'] as String,
+      userId: m['user_id'] as String,
+      item: m['item'] as String,
+      stock: m['stock'] as int,
+      costPrice: m['cost_price'] as double,
+      sellingPrice: m['selling_price'] as double,
+      expiryDate: m['expiry_date'] as String?,
+    )).toList();
   }
 
   Future<void> close() async {

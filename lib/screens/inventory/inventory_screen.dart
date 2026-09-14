@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/offline_sync_service.dart';
+import '../../services/offline_service.dart';
 import '../../models/inventory.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
@@ -16,12 +18,14 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final _dbService = RemoteDatabaseService();
   final _authService = AuthService();
+  final _offlineSync = OfflineSyncService();
   
   List<InventoryItem> _inventory = [];
   List<InventoryItem> _filteredInventory = [];
   User? _user;
   bool _isLoading = true;
   bool _isStaff = false;
+  bool _isOffline = false;
   final _searchController = TextEditingController();
 
   @override
@@ -39,13 +43,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _loadData() async {
     final user = await _authService.getCurrentUser();
     final isStaff = await _authService.isStaffLogin();
+    final isOnline = await ConnectivityService.isOnline;
     if (user == null) return;
 
-    final inventory = await _dbService.getInventory(user.id);
+    final inventory = await _offlineSync.getInventoryWithFallback(user.id);
 
     setState(() {
       _user = user;
       _isStaff = isStaff;
+      _isOffline = !isOnline;
       _inventory = inventory;
       _filteredInventory = inventory;
       _isLoading = false;
@@ -121,6 +127,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
       appBar: AppBar(
         title: const Text('Inventory'),
         actions: [
+          if (_isOffline)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Offline',
+                    style: TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
           if (!_isStaff)
             IconButton(
               icon: const Icon(Icons.add),

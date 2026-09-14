@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/offline_service.dart';
+import '../../services/offline_sync_service.dart';
 import '../../utils/theme.dart';
 import '../inventory/inventory_screen.dart';
 import '../sales/sales_screen.dart';
@@ -21,15 +22,33 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _authService = AuthService();
+  final _offlineSync = OfflineSyncService();
   bool _isLoading = true;
   bool _isStaff = false;
   String? _staffName;
   String? _userId;
+  int _pendingSyncCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _offlineSync.onSyncComplete = (remaining) {
+      if (mounted) setState(() => _pendingSyncCount = remaining);
+    };
+    _offlineSync.startAutoSync();
+    _checkPendingSync();
+  }
+
+  @override
+  void dispose() {
+    _offlineSync.stopAutoSync();
+    super.dispose();
+  }
+
+  Future<void> _checkPendingSync() async {
+    final count = await _offlineSync.getPendingSyncCount();
+    if (mounted) setState(() => _pendingSyncCount = count);
   }
 
   Future<void> _loadUserData() async {
@@ -42,6 +61,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _userId = user?.id;
       _isLoading = false;
     });
+    // Cache inventory for offline use
+    if (user != null) {
+      _offlineSync.cacheInventory(user.id);
+    }
   }
 
   Future<void> _logout() async {
@@ -67,6 +90,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          if (_pendingSyncCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.sync, size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_pendingSyncCount',
+                        style: const TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           const ConnectionStatusIndicator(isOnline: true),
           const SizedBox(width: 4),
           IconButton(

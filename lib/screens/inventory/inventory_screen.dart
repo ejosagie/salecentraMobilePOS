@@ -21,6 +21,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   List<InventoryItem> _filteredInventory = [];
   User? _user;
   bool _isLoading = true;
+  bool _isStaff = false;
   final _searchController = TextEditingController();
 
   @override
@@ -37,12 +38,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _loadData() async {
     final user = await _authService.getCurrentUser();
+    final isStaff = await _authService.isStaffLogin();
     if (user == null) return;
 
     final inventory = await _dbService.getInventory(user.id);
 
     setState(() {
       _user = user;
+      _isStaff = isStaff;
       _inventory = inventory;
       _filteredInventory = inventory;
       _isLoading = false;
@@ -118,10 +121,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
       appBar: AppBar(
         title: const Text('Inventory'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddItemDialog,
-          ),
+          if (!_isStaff)
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _showAddItemDialog,
+            ),
         ],
       ),
       body: Column(
@@ -182,11 +186,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: _showAddItemDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add First Item'),
-                            ),
+                            if (!_isStaff)
+                              ElevatedButton.icon(
+                                onPressed: _showAddItemDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add First Item'),
+                              ),
                           ],
                         ),
                       )
@@ -256,37 +261,39 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     ],
                                   ),
                                 ),
-                                trailing: PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    if (value == 'edit') {
-                                      _showEditItemDialog(item);
-                                    } else if (value == 'delete') {
-                                      _deleteItem(item);
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.edit_outlined, size: 20),
-                                          SizedBox(width: 8),
-                                          Text('Edit'),
+                                trailing: _isStaff
+                                    ? null
+                                    : PopupMenuButton<String>(
+                                        onSelected: (value) {
+                                          if (value == 'edit') {
+                                            _showEditItemDialog(item);
+                                          } else if (value == 'delete') {
+                                            _deleteItem(item);
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit_outlined, size: 20),
+                                                SizedBox(width: 8),
+                                                Text('Edit'),
+                                              ],
+                                            ),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'delete',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.delete_outline, size: 20, color: AppTheme.error),
+                                                SizedBox(width: 8),
+                                                Text('Delete', style: TextStyle(color: AppTheme.error)),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete_outline, size: 20, color: AppTheme.error),
-                                          SizedBox(width: 8),
-                                          Text('Delete', style: TextStyle(color: AppTheme.error)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             );
                           },
@@ -295,11 +302,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddItemDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Item'),
-      ),
+      floatingActionButton: _isStaff
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _showAddItemDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Item'),
+            ),
     );
   }
 

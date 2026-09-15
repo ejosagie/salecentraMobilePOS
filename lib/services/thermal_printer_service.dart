@@ -76,7 +76,8 @@ class ThermalPrinterService {
 
       // Header — combine business info into one printText call to avoid
       // the initPrinter() reset (and extra spacing) between each line.
-      await SunmiPrinter.printText('SaleCentra\n', style: smBoldCenter);
+      // printText auto-appends \n, so don't add trailing \n ourselves.
+      await SunmiPrinter.printText('SaleCentra', style: smBoldCenter);
       final headerBuf = StringBuffer(businessName.isEmpty ? 'N/A' : businessName);
       if (address.isNotEmpty) headerBuf.write('\n$address');
       headerBuf.write('\n${phone.isEmpty ? 'N/A' : phone}');
@@ -86,9 +87,11 @@ class ThermalPrinterService {
       // Receipt info
       final now = DateTime.now();
       final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      await SunmiPrinter.printText('Date: $dateStr\n', style: sm);
-      await SunmiPrinter.printText('Receipt: $receiptNo\n', style: sm);
-      await SunmiPrinter.printText('Cashier: $cashier\n', style: sm);
+      // Combine Date/Receipt/Cashier into one call — printText auto-appends \n.
+      await SunmiPrinter.printText(
+        'Date: $dateStr\nReceipt: $receiptNo\nCashier: $cashier',
+        style: sm,
+      );
       await SunmiPrinter.line();
 
       // Items — set font to SM before each printRow since printText's
@@ -135,7 +138,7 @@ class ThermalPrinterService {
 
       await SunmiPrinter.line();
 
-      // Customer info — combine into one call
+      // Customer info
       if (customerName != null && customerName.isNotEmpty) {
         final custBuf = StringBuffer('Customer: $customerName');
         if (customerPhone != null && customerPhone.isNotEmpty) {
@@ -144,7 +147,7 @@ class ThermalPrinterService {
         await SunmiPrinter.printText(custBuf.toString(), style: sm);
       }
 
-      // Payment info — combine into one call
+      // Payment info
       if (paymentMethod != null) {
         await SunmiPrinter.line();
         final payBuf = StringBuffer('Payment: $paymentMethod');
@@ -154,7 +157,7 @@ class ThermalPrinterService {
         await SunmiPrinter.printText(payBuf.toString(), style: sm);
       }
 
-      // Delivery info — combine into one call
+      // Delivery info
       if (deliveryInfo != null) {
         await SunmiPrinter.line();
         final delBuf = StringBuffer('Delivery: $deliveryInfo');

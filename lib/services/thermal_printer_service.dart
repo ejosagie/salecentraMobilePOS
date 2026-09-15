@@ -110,12 +110,10 @@ class ThermalPrinterService {
         ColumnMaker(text: 'Subtotal', width: 20, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: subtotal.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
-      if (discount > 0) {
-        await SunmiPrinter.printRow(cols: [
-          ColumnMaker(text: 'Discount', width: 20, align: SunmiPrintAlign.LEFT),
-          ColumnMaker(text: '-${discount.toStringAsFixed(2)}', width: 12, align: SunmiPrintAlign.RIGHT),
-        ]);
-      }
+      await SunmiPrinter.printRow(cols: [
+        ColumnMaker(text: 'Discount', width: 20, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: '-${discount.toStringAsFixed(2)}', width: 12, align: SunmiPrintAlign.RIGHT),
+      ]);
       await SunmiPrinter.printRow(cols: [
         ColumnMaker(text: 'TOTAL', width: 20, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: total.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
@@ -151,6 +149,8 @@ class ThermalPrinterService {
 
       await SunmiPrinter.line();
       await SunmiPrinter.printText('Thank you!\n', style: smCenter);
+      await SunmiPrinter.printText('Powered by SaleCentra\n', style: smCenter);
+      await SunmiPrinter.printText('Smart. Simple. Complete.\n', style: smCenter);
       await SunmiPrinter.lineWrap(2);
 
       await SunmiPrinter.exitTransactionPrint(true);

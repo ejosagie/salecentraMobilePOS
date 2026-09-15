@@ -2,18 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 
 class ThermalPrinterService {
-  // The regular Sunmi V2 has a built-in 58mm thermal printer, which fits
-  // ~32 half-width characters per line at the default font size. Column
-  // widths below are sized in characters (not flex weights) to match this,
-  // so item/price columns align correctly on the physical receipt.
   static const int _lineWidthChars = 32;
 
-  /// Bind to the Sunmi printer fresh every time. The binding can be lost
-  /// between calls, so we must re-bind before each print job.
+  /// Bind to the Sunmi printer using the v4.x API (rebindPrinter).
+  /// The old bindingPrinter() is deprecated and returns null in v4.1.1.
   static Future<bool> _bind() async {
     try {
-      // ignore: deprecated_member_use
-      final bound = await SunmiPrinter.bindingPrinter() ?? false;
+      final bound = await SunmiPrinterPlusPlatform.instance.rebindPrinter();
       if (kDebugMode) {
         print('[ThermalPrinter] Printer bound: $bound');
       }
@@ -54,6 +49,13 @@ class ThermalPrinterService {
     }
 
     try {
+      // Check printer status
+      final status = await SunmiPrinterPlusPlatform.instance.getStatus();
+      if (kDebugMode) print('[ThermalPrinter] Printer status: $status');
+
+      // Give the native bridge a moment to settle after binding
+      await Future.delayed(const Duration(milliseconds: 300));
+
       // Header
       await SunmiPrinter.printText('SaleCentra Receipt\n',
           style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER, fontSize: 36));
@@ -80,9 +82,7 @@ class ThermalPrinterService {
       await SunmiPrinter.line(type: '-');
       await SunmiPrinter.lineWrap(1);
 
-      // Items — name on its own full-width line, then qty/price aligned in
-      // columns sized for the 58mm/32-char printable width so the line
-      // total lands flush right regardless of digit count.
+      // Items
       for (final item in items) {
         final name = item['name'] as String? ?? '';
         final qty = item['quantity'] as int? ?? 1;
@@ -108,7 +108,7 @@ class ThermalPrinterService {
       await SunmiPrinter.line(type: '-');
       await SunmiPrinter.lineWrap(1);
 
-      // Totals — same left-label/right-value column split as the items.
+      // Totals
       await SunmiPrinter.printRow(cols: [
         SunmiColumn(
           text: 'Subtotal',

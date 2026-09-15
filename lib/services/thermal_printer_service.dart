@@ -2,38 +2,32 @@ import 'package:flutter/foundation.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 
 class ThermalPrinterService {
-  static bool _initialized = false;
-  static bool _isSunmiDevice = false;
-
   // The regular Sunmi V2 has a built-in 58mm thermal printer, which fits
   // ~32 half-width characters per line at the default font size. Column
   // widths below are sized in characters (not flex weights) to match this,
   // so item/price columns align correctly on the physical receipt.
   static const int _lineWidthChars = 32;
 
-  static Future<bool> _init() async {
-    if (_initialized) return _isSunmiDevice;
+  /// Bind to the Sunmi printer fresh every time. The binding can be lost
+  /// between calls, so we must re-bind before each print job.
+  static Future<bool> _bind() async {
     try {
-      // bindingPrinter is deprecated but still the way to check for Sunmi hardware
       // ignore: deprecated_member_use
-      _isSunmiDevice = await SunmiPrinter.bindingPrinter() ?? false;
-      _initialized = true;
+      final bound = await SunmiPrinter.bindingPrinter() ?? false;
       if (kDebugMode) {
-        print('[ThermalPrinter] Sunmi device: $_isSunmiDevice');
+        print('[ThermalPrinter] Printer bound: $bound');
       }
-      return _isSunmiDevice;
+      return bound;
     } catch (e) {
-      _initialized = true;
-      _isSunmiDevice = false;
       if (kDebugMode) {
-        print('[ThermalPrinter] Not a Sunmi device: $e');
+        print('[ThermalPrinter] Binding failed: $e');
       }
       return false;
     }
   }
 
   static Future<bool> isSunmiDevice() async {
-    return await _init();
+    return await _bind();
   }
 
   static Future<void> printReceipt({
@@ -53,9 +47,9 @@ class ThermalPrinterService {
     String? deliveryInfo,
     String? trackingNo,
   }) async {
-    final isSunmi = await _init();
+    final isSunmi = await _bind();
     if (!isSunmi) {
-      if (kDebugMode) print('[ThermalPrinter] No Sunmi printer available');
+      if (kDebugMode) print('[ThermalPrinter] No Sunmi printer available — binding failed');
       return;
     }
 

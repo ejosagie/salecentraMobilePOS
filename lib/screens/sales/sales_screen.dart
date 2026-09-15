@@ -800,14 +800,15 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       if (mounted) {
-        // Auto-print on Sunmi thermal printer
-        _printSunmiReceipt(
+        // Auto-print on Sunmi thermal printer — await so print completes first
+        await _printSunmiReceipt(
           receiptId: receiptId,
           items: _lastCompletedSaleItems,
           customerName: customerName.isNotEmpty ? customerName : null,
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
           paymentMethod: _paymentMethodLabel(paymentMethod),
         );
+        if (!mounted) return;
         _showReceiptDialog(
           customerName: customerName.isNotEmpty ? customerName : null,
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,

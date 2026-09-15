@@ -806,11 +806,13 @@ class _SalesScreenState extends State<SalesScreen> {
           items: _lastCompletedSaleItems,
           customerName: customerName.isNotEmpty ? customerName : null,
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
+          paymentMethod: _paymentMethodLabel(paymentMethod),
         );
         _showReceiptDialog(
           customerName: customerName.isNotEmpty ? customerName : null,
           customerPhone: customerPhone.isNotEmpty ? customerPhone : null,
           customerAddress: customerAddress.isNotEmpty ? customerAddress : null,
+          paymentMethod: _paymentMethodLabel(paymentMethod),
         );
         if (hadOfflineSale) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -836,11 +838,23 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
+  String _paymentMethodLabel(String method) {
+    switch (method) {
+      case 'online':
+        return 'Online Payment';
+      case 'bank_transfer':
+        return 'Bank Transfer';
+      default:
+        return 'Cash';
+    }
+  }
+
   Future<void> _printSunmiReceipt({
     required String? receiptId,
     required List<CartItem> items,
     String? customerName,
     String? customerPhone,
+    String? paymentMethod,
   }) async {
     if (_user == null || receiptId == null) return;
     final subtotal = items.fold(0.0, (sum, item) => sum + item.totalPrice);
@@ -865,6 +879,7 @@ class _SalesScreenState extends State<SalesScreen> {
       total: total,
       customerName: customerName,
       customerPhone: customerPhone,
+      paymentMethod: paymentMethod,
     );
   }
 
@@ -872,6 +887,7 @@ class _SalesScreenState extends State<SalesScreen> {
     String? customerName,
     String? customerPhone,
     String? customerAddress,
+    String? paymentMethod,
   }) {
     final soldItems = _lastCompletedSaleItems;
     final soldTotal = soldItems.fold(0.0, (sum, item) => sum + item.totalPrice);
@@ -901,26 +917,28 @@ class _SalesScreenState extends State<SalesScreen> {
                 color: AppTheme.textSecondary,
               ),
             ),
+            if (paymentMethod != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Paid via: $paymentMethod',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.print, size: 16, color: AppTheme.primaryColor),
+                const SizedBox(width: 6),
+                Text(
+                  'Receipt printing...',
+                  style: TextStyle(fontSize: 13, color: AppTheme.primaryColor),
+                ),
+              ],
+            ),
           ],
         ),
         actions: [
-          TextButton.icon(
-            onPressed: () async {
-              if (_user == null || receiptId == null || saleDate == null || soldItems.isEmpty) return;
-              await PdfService.printThermalGroupedReceipt(
-                receiptId: receiptId,
-                date: saleDate,
-                items: soldItems,
-                user: _user!,
-                enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerAddress: customerAddress,
-              );
-            },
-            icon: const Icon(Icons.print),
-            label: const Text('Print'),
-          ),
           TextButton.icon(
             onPressed: () {
               _printSunmiReceipt(
@@ -931,24 +949,7 @@ class _SalesScreenState extends State<SalesScreen> {
               );
             },
             icon: const Icon(Icons.receipt_outlined),
-            label: const Text('Reprint (POS)'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              if (_user == null || receiptId == null || saleDate == null || soldItems.isEmpty) return;
-              await PdfService.generateAndShareRichReceipt(
-                receiptId: receiptId,
-                date: saleDate,
-                items: soldItems,
-                user: _user!,
-                enteredByStaffName: widget.isStaffMode ? widget.staffName : null,
-                customerName: customerName,
-                customerPhone: customerPhone,
-                customerAddress: customerAddress,
-              );
-            },
-            icon: const Icon(Icons.share),
-            label: const Text('Share Receipt'),
+            label: const Text('Reprint'),
           ),
           ElevatedButton(
             onPressed: () {

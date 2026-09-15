@@ -13,6 +13,28 @@ import '../../models/shop_order.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
 
+class HeldCart {
+  final String id;
+  final List<CartItem> items;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerAddress;
+  final DateTime heldAt;
+  final String label;
+
+  HeldCart({
+    required this.id,
+    required this.items,
+    this.customerName,
+    this.customerPhone,
+    this.customerAddress,
+    required this.heldAt,
+    this.label = '',
+  });
+
+  double get total => items.fold(0.0, (sum, item) => sum + item.totalPrice);
+}
+
 class SalesScreen extends StatefulWidget {
   final bool isStaffMode;
   final String? staffName;
@@ -38,6 +60,7 @@ class _SalesScreenState extends State<SalesScreen> {
   User? _user;
   List<InventoryItem> _inventory = [];
   List<CartItem> _cart = [];
+  List<HeldCart> _heldCarts = [];
   List<CartItem> _lastCompletedSaleItems = [];
   String? _lastCompletedReceiptId;
   DateTime? _lastCompletedSaleDate;
@@ -255,6 +278,249 @@ class _SalesScreenState extends State<SalesScreen> {
       _customerSearchResults = [];
       _showCustomerFields = false;
     });
+  }
+
+  void _holdCurrentCart() {
+    if (_cart.isEmpty) {
+      _showError('Cart is empty — nothing to hold.');
+      return;
+    }
+    final customerName = _customerNameController.text.trim();
+    final label = customerName.isNotEmpty ? customerName : 'Cart ${_heldCarts.length + 1}';
+    final held = HeldCart(
+      id: _uuid.v4(),
+      items: _cart
+          .map((item) {
+            final copy = CartItem(
+              inventoryItem: item.inventoryItem,
+              quantity: item.quantity,
+              discount: item.discount,
+            );
+            if (item.hasCustomPrice) copy.unitPrice = item.unitPrice;
+            return copy;
+          })
+          .toList(),
+      customerName: customerName.isNotEmpty ? customerName : null,
+      customerPhone: _customerPhoneController.text.trim().isNotEmpty
+          ? _customerPhoneController.text.trim()
+          : null,
+      customerAddress: _customerAddressController.text.trim().isNotEmpty
+          ? _customerAddressController.text.trim()
+          : null,
+      heldAt: DateTime.now(),
+      label: label,
+    );
+    setState(() {
+      _heldCarts.add(held);
+      _cart.clear();
+      _clearCustomer();
+      _selectedIndex = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Cart held for "$label". Start a new sale.'),
+        backgroundColor: AppTheme.info,
+        action: SnackBarAction(
+          label: 'View Held',
+          textColor: Colors.white,
+          onPressed: _showHeldCartsDialog,
+        ),
+      ),
+    );
+  }
+
+  void _resumeHeldCart(int index) {
+    if (index < 0 || index >= _heldCarts.length) return;
+    if (_cart.isNotEmpty) {
+      _showError('Current cart must be empty or held before resuming another.');
+      return;
+    }
+    final held = _heldCarts[index];
+    final warnings = <String>[];
+
+    // Refresh stock values from current inventory to avoid stale data
+    for (final cartItem in held.items) {
+      final match = _inventory.where((i) => i.id == cartItem.inventoryItem.id).firstOrNull;
+      if (match != null) {
+        cartItem.inventoryItem.stock = match.stock;
+        if (cartItem.quantity > match.stock) {
+          warnings.add('${cartItem.itemName}: only ${match.stock} left (cart has ${cartItem.quantity})');
+          if (match.stock <= 0) {
+            cartItem.quantity = 0;
+          } else {
+            cartItem.quantity = match.stock;
+          }
+        }
+      } else {
+        warnings.add('${cartItem.itemName}: no longer in inventory');
+        cartItem.quantity = 0;
+      }
+    }
+
+    // Remove items with zeroed-out quantity (no stock or missing)
+    held.items.removeWhere((item) => item.quantity <= 0);
+
+    if (held.items.isEmpty) {
+      setState(() {
+        _heldCarts.removeAt(index);
+      });
+      _showError('All items in this held cart are out of stock. Cart discarded.');
+      return;
+    }
+
+    setState(() {
+      _cart = held.items;
+      if (held.customerName != null) {
+        _customerNameController.text = held.customerName!;
+        _showCustomerFields = true;
+      }
+      if (held.customerPhone != null) _customerPhoneController.text = held.customerPhone!;
+      if (held.customerAddress != null) _customerAddressController.text = held.customerAddress!;
+      _heldCarts.removeAt(index);
+      _selectedIndex = 1;
+    });
+
+    if (warnings.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Resumed with adjustments:\n${warnings.join('\n')}'),
+          backgroundColor: AppTheme.warning,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Resumed cart for "${held.label}".'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
+  void _deleteHeldCart(int index) {
+    if (index < 0 || index >= _heldCarts.length) return;
+    final held = _heldCarts[index];
+    setState(() => _heldCarts.removeAt(index));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Held cart "${held.label}" discarded.'),
+        backgroundColor: AppTheme.warning,
+      ),
+    );
+  }
+
+  void _showHeldCartsDialog() {
+    if (_heldCarts.isEmpty) {
+      _showError('No held carts.');
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: const EdgeInsets.all(16),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Held Carts (${_heldCarts.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              if (_cart.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, size: 18, color: AppTheme.warning),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Current cart has items. Hold or clear it before resuming another.',
+                          style: TextStyle(fontSize: 12, color: AppTheme.warning),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _heldCarts.length,
+                  itemBuilder: (context, index) {
+                    final held = _heldCarts[index];
+                    final timeStr =
+                        '${held.heldAt.hour.toString().padLeft(2, '0')}:${held.heldAt.minute.toString().padLeft(2, '0')}';
+                    final itemCount = held.items.fold(0, (sum, item) => sum + item.quantity);
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          child: Text(
+                            '${held.items.length}',
+                            style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        title: Text(held.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '$itemCount items · $currencySymbol${held.total.toStringAsFixed(2)} · Held at $timeStr',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.play_circle_fill, color: AppTheme.success),
+                              tooltip: 'Resume',
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _resumeHeldCart(index);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                              tooltip: 'Discard',
+                              onPressed: () {
+                                setModalState(() {});
+                                _deleteHeldCart(index);
+                                if (_heldCarts.isEmpty) Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showDiscountDialog(int index) async {
@@ -673,6 +939,10 @@ class _SalesScreenState extends State<SalesScreen> {
               Expanded(
                 child: _buildTabButton('Cart (${_cart.length})', 1, Icons.shopping_cart_outlined),
               ),
+              if (_heldCarts.isNotEmpty)
+                Expanded(
+                  child: _buildTabButton('Held (${_heldCarts.length})', 3, Icons.pause_circle),
+                ),
               if (widget.isStaffMode && widget.isDefaultStaff)
                 Expanded(
                   child: _buildTabButton('Orders (${_pendingOrders.length})', 2, Icons.receipt_long_outlined),
@@ -686,7 +956,9 @@ class _SalesScreenState extends State<SalesScreen> {
               ? _buildItemsView()
               : _selectedIndex == 1
                   ? _buildCartView()
-                  : _buildOrdersView(),
+                  : _selectedIndex == 3
+                      ? _buildHeldCartsView()
+                      : _buildOrdersView(),
         ),
         if (_selectedIndex == 0 && _cart.isNotEmpty)
           Container(
@@ -749,6 +1021,18 @@ class _SalesScreenState extends State<SalesScreen> {
                     ),
                   ),
                   ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _holdCurrentCart,
+                    icon: const Icon(Icons.pause_circle_outline),
+                    label: const Text('Hold'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ).merge(ButtonStyle(
+                      backgroundColor: WidgetStatePropertyAll(Colors.grey.shade100),
+                      foregroundColor: WidgetStatePropertyAll(AppTheme.textPrimary),
+                    )),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
                     onPressed: _isLoading ? null : _completeSale,
                     icon: _isLoading
                         ? const SizedBox(
@@ -768,6 +1052,114 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
       ],
       ),
+    );
+  }
+
+  Widget _buildHeldCartsView() {
+    if (_heldCarts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.pause_circle_outline, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text(
+              'No held carts',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Hold a cart from the Cart tab to park a sale',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _heldCarts.length,
+      itemBuilder: (context, index) {
+        final held = _heldCarts[index];
+        final timeStr = '${held.heldAt.hour.toString().padLeft(2, '0')}:${held.heldAt.minute.toString().padLeft(2, '0')}';
+        final itemCount = held.items.fold(0, (sum, item) => sum + item.quantity);
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        held.label,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                    ),
+                    Text(
+                      'Held at $timeStr',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$itemCount items · Total: $currencySymbol${held.total.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
+                if (held.customerName != null || held.customerPhone != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (held.customerName != null) held.customerName!,
+                      if (held.customerPhone != null) held.customerPhone!,
+                    ].join(' · '),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _resumeHeldCart(index);
+                        },
+                        icon: const Icon(Icons.play_circle_fill, color: AppTheme.success),
+                        label: const Text('Resume'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.success,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() => _deleteHeldCart(index));
+                        },
+                        icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                        label: const Text('Discard'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1248,7 +1640,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppTheme.warning.withOpacity(0.1),
+                          color: AppTheme.warning.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

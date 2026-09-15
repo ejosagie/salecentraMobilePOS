@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'database_service.dart';
 import 'remote_database_service.dart';
 import 'offline_service.dart';
 import '../models/inventory.dart';
+import '../models/sale.dart';
 
 class OfflineSyncService {
   static final OfflineSyncService _instance = OfflineSyncService._internal();

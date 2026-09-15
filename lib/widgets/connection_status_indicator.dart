@@ -16,20 +16,50 @@ class ConnectionStatusIndicator extends StatefulWidget {
 }
 
 class _ConnectionStatusIndicatorState extends State<ConnectionStatusIndicator> {
+  bool _isOnline = true;
+  int _offlineDays = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+    ConnectivityService.onConnectivityChanged.listen((online) {
+      if (mounted) {
+        setState(() => _isOnline = online);
+        if (!online) {
+          OfflineAuthService.getOfflineDaysRemaining().then((days) {
+            if (mounted) setState(() => _offlineDays = days);
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _checkConnectivity() async {
+    final online = await ConnectivityService.isOnline;
+    if (mounted) {
+      setState(() => _isOnline = online);
+      if (!online) {
+        final days = await OfflineAuthService.getOfflineDaysRemaining();
+        if (mounted) setState(() => _offlineDays = days);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final color = widget.isOnline ? Colors.green : Colors.red;
-    final label = widget.isOnline
+    final color = _isOnline ? Colors.green : Colors.red;
+    final label = _isOnline
         ? 'Online'
-        : 'Offline — ${widget.offlineDaysRemaining} days left';
+        : 'Offline — $_offlineDays days left';
 
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.isOnline
+            content: Text(_isOnline
                 ? 'Connected to internet'
-                : 'Offline — ${widget.offlineDaysRemaining} days remaining. Sales will sync when back online.'),
+                : 'Offline — $_offlineDays days remaining. Sales will sync when back online.'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -68,6 +98,8 @@ class _ConnectionStatusIndicatorState extends State<ConnectionStatusIndicator> {
 }
 
 class ConnectionStatusBanner extends StatefulWidget {
+  const ConnectionStatusBanner({super.key});
+
   @override
   State<ConnectionStatusBanner> createState() => _ConnectionStatusBannerState();
 }

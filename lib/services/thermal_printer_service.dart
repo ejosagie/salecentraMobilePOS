@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 
@@ -11,7 +10,7 @@ class ThermalPrinterService {
     try {
       // bindingPrinter is deprecated but still the way to check for Sunmi hardware
       // ignore: deprecated_member_use
-      _isSunmiDevice = await SunmiPrinter.bindingPrinter();
+      _isSunmiDevice = await SunmiPrinter.bindingPrinter() ?? false;
       _initialized = true;
       if (kDebugMode) {
         print('[ThermalPrinter] Sunmi device: $_isSunmiDevice');

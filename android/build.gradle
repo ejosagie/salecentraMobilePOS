@@ -8,19 +8,17 @@ allprojects {
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
-}
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            if (project.android.namespace == null) {
-                def manifest = file("${project.projectDir}/src/main/AndroidManifest.xml")
-                if (manifest.exists()) {
-                    def pkg = new groovy.xml.XmlSlurper().parse(manifest).@package
-                    if (pkg) {
-                        project.android.namespace = pkg.toString()
+    if (project.path != ':app') {
+        project.evaluationDependsOn(':app')
+        afterEvaluate { project ->
+            if (project.hasProperty('android')) {
+                if (project.android.namespace == null) {
+                    def manifest = file("${project.projectDir}/src/main/AndroidManifest.xml")
+                    if (manifest.exists()) {
+                        def pkg = new groovy.xml.XmlSlurper().parse(manifest).@package
+                        if (pkg) {
+                            project.android.namespace = pkg.toString()
+                        }
                     }
                 }
             }

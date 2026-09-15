@@ -40,7 +40,6 @@ dependencies:
   connectivity_plus: ^5.0.2
   wakelock_plus: ^1.2.5
   flutter_secure_storage: ^9.0.0
-  flutter_beep: ^1.0.0
 
 dev_dependencies:
   flutter_test:

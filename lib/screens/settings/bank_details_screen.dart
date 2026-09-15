@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/pos_service.dart';
-import '../utils/theme.dart';
+import '../../services/pos_service.dart';
+import '../../utils/theme.dart';
 
 class BankDetailsScreen extends StatefulWidget {
   final String userId;

@@ -1,19 +1,27 @@
 import 'package:flutter/foundation.dart';
+import 'package:sunmi_printer_plus/column_maker.dart';
+import 'package:sunmi_printer_plus/enums.dart';
+import 'package:sunmi_printer_plus/sunmi_style.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 
 class ThermalPrinterService {
   static const int _lineWidthChars = 32;
+  static bool _bindLock = false;
 
-  /// Bind to the Sunmi printer using the v4.x API (rebindPrinter).
-  /// The old bindingPrinter() is deprecated and returns null in v4.1.1.
+  /// Bind to the Sunmi printer. In v3.x, bindingPrinter() actually works.
+  /// Must be called before every print job.
   static Future<bool> _bind() async {
+    if (_bindLock) return true;
+    _bindLock = true;
     try {
-      final bound = await SunmiPrinterPlusPlatform.instance.rebindPrinter();
+      final bound = await SunmiPrinter.bindingPrinter() ?? false;
       if (kDebugMode) {
         print('[ThermalPrinter] Printer bound: $bound');
       }
+      _bindLock = false;
       return bound;
     } catch (e) {
+      _bindLock = false;
       if (kDebugMode) {
         print('[ThermalPrinter] Binding failed: $e');
       }
@@ -44,42 +52,51 @@ class ThermalPrinterService {
   }) async {
     final isSunmi = await _bind();
     if (!isSunmi) {
-      if (kDebugMode) print('[ThermalPrinter] No Sunmi printer available — binding failed');
+      if (kDebugMode) print('[ThermalPrinter] No Sunmi printer available');
       return;
     }
 
     try {
-      // Check printer status
-      final status = await SunmiPrinterPlusPlatform.instance.getStatus();
-      if (kDebugMode) print('[ThermalPrinter] Printer status: $status');
-
-      // Give the native bridge a moment to settle after binding
-      await Future.delayed(const Duration(milliseconds: 300));
+      await SunmiPrinter.initPrinter();
+      await SunmiPrinter.startTransactionPrint(true);
 
       // Header
       await SunmiPrinter.printText('SaleCentra Receipt\n',
-          style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER, fontSize: 36));
+          style: SunmiStyle(
+            bold: true,
+            align: SunmiPrintAlign.CENTER,
+            fontSize: SunmiFontSize.LG,
+          ));
       await SunmiPrinter.printText('$businessName\n',
-          style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 24));
+          style: SunmiStyle(
+            align: SunmiPrintAlign.CENTER,
+            fontSize: SunmiFontSize.MD,
+          ));
       if (address.isNotEmpty) {
         await SunmiPrinter.printText('$address\n',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 18));
+            style: SunmiStyle(
+              align: SunmiPrintAlign.CENTER,
+              fontSize: SunmiFontSize.SM,
+            ));
       }
       await SunmiPrinter.printText('$phone\n',
-          style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 18));
-      await SunmiPrinter.line(type: '*');
+          style: SunmiStyle(
+            align: SunmiPrintAlign.CENTER,
+            fontSize: SunmiFontSize.SM,
+          ));
+      await SunmiPrinter.line();
       await SunmiPrinter.lineWrap(1);
 
       // Receipt info
       final now = DateTime.now();
       final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
       await SunmiPrinter.printText('Date: $dateStr\n',
-          style: SunmiTextStyle(fontSize: 18));
+          style: SunmiStyle(fontSize: SunmiFontSize.SM));
       await SunmiPrinter.printText('Receipt: $receiptNo\n',
-          style: SunmiTextStyle(fontSize: 18));
+          style: SunmiStyle(fontSize: SunmiFontSize.SM));
       await SunmiPrinter.printText('Cashier: $cashier\n',
-          style: SunmiTextStyle(fontSize: 18));
-      await SunmiPrinter.line(type: '-');
+          style: SunmiStyle(fontSize: SunmiFontSize.SM));
+      await SunmiPrinter.line();
       await SunmiPrinter.lineWrap(1);
 
       // Items
@@ -90,109 +107,118 @@ class ThermalPrinterService {
         final lineTotal = price * qty;
 
         await SunmiPrinter.printText('$name\n',
-            style: SunmiTextStyle(fontSize: 18));
+            style: SunmiStyle(fontSize: SunmiFontSize.SM));
         await SunmiPrinter.printRow(cols: [
-          SunmiColumn(
+          ColumnMaker(
             text: '  ${qty}x @ ${price.toStringAsFixed(2)}',
             width: _lineWidthChars - 12,
-            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+            align: SunmiPrintAlign.LEFT,
           ),
-          SunmiColumn(
+          ColumnMaker(
             text: lineTotal.toStringAsFixed(2),
             width: 12,
-            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+            align: SunmiPrintAlign.RIGHT,
           ),
         ]);
       }
 
-      await SunmiPrinter.line(type: '-');
+      await SunmiPrinter.line();
       await SunmiPrinter.lineWrap(1);
 
       // Totals
       await SunmiPrinter.printRow(cols: [
-        SunmiColumn(
+        ColumnMaker(
           text: 'Subtotal',
           width: _lineWidthChars - 12,
-          style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+          align: SunmiPrintAlign.LEFT,
         ),
-        SunmiColumn(
+        ColumnMaker(
           text: subtotal.toStringAsFixed(2),
           width: 12,
-          style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+          align: SunmiPrintAlign.RIGHT,
         ),
       ]);
       if (discount > 0) {
         await SunmiPrinter.printRow(cols: [
-          SunmiColumn(
+          ColumnMaker(
             text: 'Discount',
             width: _lineWidthChars - 12,
-            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+            align: SunmiPrintAlign.LEFT,
           ),
-          SunmiColumn(
+          ColumnMaker(
             text: '-${discount.toStringAsFixed(2)}',
             width: 12,
-            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+            align: SunmiPrintAlign.RIGHT,
           ),
         ]);
       }
       await SunmiPrinter.printRow(cols: [
-        SunmiColumn(
+        ColumnMaker(
           text: 'TOTAL',
           width: _lineWidthChars - 12,
-          style: SunmiTextStyle(bold: true, fontSize: 28, align: SunmiPrintAlign.LEFT),
+          align: SunmiPrintAlign.LEFT,
         ),
-        SunmiColumn(
+        ColumnMaker(
           text: total.toStringAsFixed(2),
           width: 12,
-          style: SunmiTextStyle(bold: true, fontSize: 28, align: SunmiPrintAlign.RIGHT),
+          align: SunmiPrintAlign.RIGHT,
         ),
       ]);
 
-      await SunmiPrinter.line(type: '-');
+      await SunmiPrinter.line();
       await SunmiPrinter.lineWrap(1);
 
       // Customer info
       if (customerName != null && customerName.isNotEmpty) {
         await SunmiPrinter.printText('Customer: $customerName\n',
-            style: SunmiTextStyle(fontSize: 18));
+            style: SunmiStyle(fontSize: SunmiFontSize.SM));
       }
       if (customerPhone != null && customerPhone.isNotEmpty) {
         await SunmiPrinter.printText('Phone: $customerPhone\n',
-            style: SunmiTextStyle(fontSize: 18));
+            style: SunmiStyle(fontSize: SunmiFontSize.SM));
       }
 
       // Payment info
       if (paymentMethod != null) {
-        await SunmiPrinter.line(type: '-');
+        await SunmiPrinter.line();
         await SunmiPrinter.lineWrap(1);
         await SunmiPrinter.printText('Payment: $paymentMethod\n',
-            style: SunmiTextStyle(fontSize: 18));
+            style: SunmiStyle(fontSize: SunmiFontSize.SM));
         if (paymentStatus != null) {
           await SunmiPrinter.printText('Status: $paymentStatus\n',
-              style: SunmiTextStyle(fontSize: 18));
+              style: SunmiStyle(fontSize: SunmiFontSize.SM));
         }
       }
 
       // Delivery info
       if (deliveryInfo != null) {
-        await SunmiPrinter.line(type: '-');
+        await SunmiPrinter.line();
         await SunmiPrinter.lineWrap(1);
         await SunmiPrinter.printText('Delivery: $deliveryInfo\n',
-            style: SunmiTextStyle(fontSize: 18));
+            style: SunmiStyle(fontSize: SunmiFontSize.SM));
         if (trackingNo != null) {
           await SunmiPrinter.printText('Tracking: $trackingNo\n',
-              style: SunmiTextStyle(fontSize: 18));
+              style: SunmiStyle(fontSize: SunmiFontSize.SM));
         }
       }
 
-      await SunmiPrinter.line(type: '-');
+      await SunmiPrinter.line();
       await SunmiPrinter.lineWrap(1);
       await SunmiPrinter.printText('Thank you for your business!\n',
-          style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, fontSize: 18));
+          style: SunmiStyle(
+            align: SunmiPrintAlign.CENTER,
+            fontSize: SunmiFontSize.SM,
+          ));
       await SunmiPrinter.lineWrap(2);
-      await SunmiPrinter.cutPaper();
+
+      // Commit and close the transaction — this flushes the buffer to hardware
+      await SunmiPrinter.exitTransactionPrint(true);
     } catch (e) {
       if (kDebugMode) print('[ThermalPrinter] Print error: $e');
+      // Try to exit transaction even on error to release the printer
+      try {
+        await SunmiPrinter.exitTransactionPrint(true);
+      } catch (_) {}
     }
   }
 }

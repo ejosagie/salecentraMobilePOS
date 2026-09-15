@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:sunmi_printer_plus/column_maker.dart';
 import 'package:sunmi_printer_plus/enums.dart';
@@ -60,26 +61,34 @@ class ThermalPrinterService {
       await SunmiPrinter.initPrinter();
       await SunmiPrinter.startTransactionPrint(true);
 
-      final sm = SunmiStyle(fontSize: SunmiFontSize.SM);
-      final smBold = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true);
-      final smCenter = SunmiStyle(fontSize: SunmiFontSize.SM, align: SunmiPrintAlign.CENTER);
-      final smBoldCenter = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true, align: SunmiPrintAlign.CENTER);
+      // Tighten line spacing via ESC/POS command: ESC 3 n
+      // Default is ~30 dots; 16 gives compact output without crowding.
+      await SunmiPrinter.printRawData(
+        Uint8List.fromList([0x1B, 0x33, 16]),
+      );
 
-      // Header — always print business info
+      final sm = SunmiStyle(fontSize: SunmiFontSize.XS);
+      final smBold = SunmiStyle(fontSize: SunmiFontSize.XS, bold: true);
+      final smCenter = SunmiStyle(fontSize: SunmiFontSize.XS, align: SunmiPrintAlign.CENTER);
+      final smBoldCenter = SunmiStyle(fontSize: SunmiFontSize.XS, bold: true, align: SunmiPrintAlign.CENTER);
+
+      // Header — combine business info into one printText call to avoid
+      // the initPrinter() reset (and extra spacing) between each line.
       await SunmiPrinter.printText('SaleCentra\n', style: smBoldCenter);
-      await SunmiPrinter.printText('${businessName.isEmpty ? 'N/A' : businessName}\n', style: smCenter);
-      if (address.isNotEmpty) {
-        await SunmiPrinter.printText('$address\n', style: smCenter);
-      }
-      await SunmiPrinter.printText('${phone.isEmpty ? 'N/A' : phone}\n', style: smCenter);
+      final headerBuf = StringBuffer(businessName.isEmpty ? 'N/A' : businessName);
+      if (address.isNotEmpty) headerBuf.write('\n$address');
+      headerBuf.write('\n${phone.isEmpty ? 'N/A' : phone}');
+      await SunmiPrinter.printText(headerBuf.toString(), style: smCenter);
       await SunmiPrinter.line();
 
       // Receipt info
       final now = DateTime.now();
       final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
       await SunmiPrinter.printText('Date: $dateStr\n', style: sm);
-      await SunmiPrinter.printText('Receipt: $receiptNo\n', style: sm);
-      await SunmiPrinter.printText('Cashier: $cashier\n', style: sm);
+      await SunmiPrinter.printRow(cols: [
+        ColumnMaker(text: 'Receipt: $receiptNo', width: 20, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'Cashier: $cashier', width: 12, align: SunmiPrintAlign.RIGHT),
+      ]);
       await SunmiPrinter.line();
 
       // Items — single row per item: name on left, qty x price on right
@@ -121,37 +130,47 @@ class ThermalPrinterService {
 
       await SunmiPrinter.line();
 
-      // Customer info
+      // Customer info — combine into one call
       if (customerName != null && customerName.isNotEmpty) {
-        await SunmiPrinter.printText('Customer: $customerName\n', style: sm);
-      }
-      if (customerPhone != null && customerPhone.isNotEmpty) {
-        await SunmiPrinter.printText('Phone: $customerPhone\n', style: sm);
+        final custBuf = StringBuffer('Customer: $customerName');
+        if (customerPhone != null && customerPhone.isNotEmpty) {
+          custBuf.write('\nPhone: $customerPhone');
+        }
+        await SunmiPrinter.printText(custBuf.toString(), style: sm);
       }
 
-      // Payment info
+      // Payment info — combine into one call
       if (paymentMethod != null) {
         await SunmiPrinter.line();
-        await SunmiPrinter.printText('Payment: $paymentMethod\n', style: sm);
+        final payBuf = StringBuffer('Payment: $paymentMethod');
         if (paymentStatus != null) {
-          await SunmiPrinter.printText('Status: $paymentStatus\n', style: sm);
+          payBuf.write('\nStatus: $paymentStatus');
         }
+        await SunmiPrinter.printText(payBuf.toString(), style: sm);
       }
 
-      // Delivery info
+      // Delivery info — combine into one call
       if (deliveryInfo != null) {
         await SunmiPrinter.line();
-        await SunmiPrinter.printText('Delivery: $deliveryInfo\n', style: sm);
+        final delBuf = StringBuffer('Delivery: $deliveryInfo');
         if (trackingNo != null) {
-          await SunmiPrinter.printText('Tracking: $trackingNo\n', style: sm);
+          delBuf.write('\nTracking: $trackingNo');
         }
+        await SunmiPrinter.printText(delBuf.toString(), style: sm);
       }
 
       await SunmiPrinter.line();
-      await SunmiPrinter.printText('Thank you!\n', style: smCenter);
-      await SunmiPrinter.printText('Powered by SaleCentra\n', style: smCenter);
-      await SunmiPrinter.printText('Smart. Simple. Complete.\n', style: smCenter);
-      await SunmiPrinter.lineWrap(2);
+      // Footer — combine into one call to avoid extra spacing
+      await SunmiPrinter.printText(
+        'Thank you!\nPowered by SaleCentra\nSmart. Simple. Complete.',
+        style: smCenter,
+      );
+      await SunmiPrinter.lineWrap(1);
+
+      // Reset line spacing to default (ESC 2)
+      await SunmiPrinter.printRawData(
+        Uint8List.fromList([0x1B, 0x32]),
+      );
 
       await SunmiPrinter.exitTransactionPrint(true);
     } catch (e) {

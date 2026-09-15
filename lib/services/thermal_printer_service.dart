@@ -34,6 +34,16 @@ class ThermalPrinterService {
     return await _bind();
   }
 
+  // Print a separator line at SM font size. The SDK's line() method calls
+  // resetFontSize() internally (sets to MD=24px), so we use our own to keep
+  // the entire receipt at a uniform SM (18px) size.
+  static Future<void> _printLine() async {
+    await SunmiPrinter.printText(
+      List.filled(31, '-').join(),
+      style: SunmiStyle(fontSize: SunmiFontSize.SM),
+    );
+  }
+
   static Future<void> printReceipt({
     required String businessName,
     required String address,
@@ -82,7 +92,7 @@ class ThermalPrinterService {
       if (address.isNotEmpty) headerBuf.write('\n$address');
       headerBuf.write('\n${phone.isEmpty ? 'N/A' : phone}');
       await SunmiPrinter.printText(headerBuf.toString(), style: smCenter);
-      await SunmiPrinter.line();
+      await _printLine();
 
       // Receipt info
       final now = DateTime.now();
@@ -92,7 +102,7 @@ class ThermalPrinterService {
         'Date: $dateStr\nReceipt: $receiptNo\nCashier: $cashier',
         style: sm,
       );
-      await SunmiPrinter.line();
+      await _printLine();
 
       // Items — if the name is short enough, print on one row with the
       // amount right-aligned. If the name is too long, print the name on
@@ -138,7 +148,7 @@ class ThermalPrinterService {
         }
       }
 
-      await SunmiPrinter.line();
+      await _printLine();
 
       // Totals
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
@@ -157,7 +167,7 @@ class ThermalPrinterService {
         ColumnMaker(text: total.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
 
-      await SunmiPrinter.line();
+      await _printLine();
 
       // Customer info
       if (customerName != null && customerName.isNotEmpty) {
@@ -170,7 +180,7 @@ class ThermalPrinterService {
 
       // Payment info
       if (paymentMethod != null) {
-        await SunmiPrinter.line();
+        await _printLine();
         final payBuf = StringBuffer('Payment: $paymentMethod');
         if (paymentStatus != null) {
           payBuf.write('\nStatus: $paymentStatus');
@@ -180,7 +190,7 @@ class ThermalPrinterService {
 
       // Delivery info
       if (deliveryInfo != null) {
-        await SunmiPrinter.line();
+        await _printLine();
         final delBuf = StringBuffer('Delivery: $deliveryInfo');
         if (trackingNo != null) {
           delBuf.write('\nTracking: $trackingNo');
@@ -188,7 +198,7 @@ class ThermalPrinterService {
         await SunmiPrinter.printText(delBuf.toString(), style: sm);
       }
 
-      await SunmiPrinter.line();
+      await _printLine();
       // Footer — combine into one call to avoid extra spacing
       await SunmiPrinter.printText(
         'Thank you!\nPowered by SaleCentra\nSmart. Simple. Complete.',

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/pdf_service.dart';
 import '../../services/thermal_printer_service.dart';
 import '../../services/offline_sync_service.dart';
 import '../../services/offline_service.dart';

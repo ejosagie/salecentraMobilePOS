@@ -94,27 +94,48 @@ class ThermalPrinterService {
       );
       await SunmiPrinter.line();
 
-      // Items — set font to SM before each printRow since printText's
-      // initPrinter() resets the font to MD (24) which causes overlap.
+      // Items — if the name is short enough, print on one row with the
+      // amount right-aligned. If the name is too long, print the name on
+      // its own line and the qty x price = total on the next line, so
+      // nothing gets truncated or overlaps.
       for (final item in items) {
         final name = item['name'] as String? ?? '';
         final qty = item['quantity'] as int? ?? 1;
         final price = (item['price'] as num?)?.toDouble() ?? 0.0;
         final lineTotal = price * qty;
+        final itemText = '${qty}x $name';
 
-        await SunmiPrinter.setFontSize(SunmiFontSize.SM);
-        await SunmiPrinter.printRow(cols: [
-          ColumnMaker(
-            text: '${qty}x $name',
-            width: 20,
-            align: SunmiPrintAlign.LEFT,
-          ),
-          ColumnMaker(
-            text: lineTotal.toStringAsFixed(2),
-            width: 12,
-            align: SunmiPrintAlign.RIGHT,
-          ),
-        ]);
+        if (itemText.length <= 18) {
+          await SunmiPrinter.setFontSize(SunmiFontSize.SM);
+          await SunmiPrinter.printRow(cols: [
+            ColumnMaker(
+              text: itemText,
+              width: 20,
+              align: SunmiPrintAlign.LEFT,
+            ),
+            ColumnMaker(
+              text: lineTotal.toStringAsFixed(2),
+              width: 12,
+              align: SunmiPrintAlign.RIGHT,
+            ),
+          ]);
+        } else {
+          // Long item — name on its own line, then qty x price = total
+          await SunmiPrinter.printText(itemText, style: sm);
+          await SunmiPrinter.setFontSize(SunmiFontSize.SM);
+          await SunmiPrinter.printRow(cols: [
+            ColumnMaker(
+              text: '  ${qty} x ${price.toStringAsFixed(2)}',
+              width: 20,
+              align: SunmiPrintAlign.LEFT,
+            ),
+            ColumnMaker(
+              text: lineTotal.toStringAsFixed(2),
+              width: 12,
+              align: SunmiPrintAlign.RIGHT,
+            ),
+          ]);
+        }
       }
 
       await SunmiPrinter.line();

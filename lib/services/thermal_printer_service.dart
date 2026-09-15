@@ -67,10 +67,12 @@ class ThermalPrinterService {
         Uint8List.fromList([0x1B, 0x33, 16]),
       );
 
-      final sm = SunmiStyle(fontSize: SunmiFontSize.XS);
-      final smBold = SunmiStyle(fontSize: SunmiFontSize.XS, bold: true);
-      final smCenter = SunmiStyle(fontSize: SunmiFontSize.XS, align: SunmiPrintAlign.CENTER);
-      final smBoldCenter = SunmiStyle(fontSize: SunmiFontSize.XS, bold: true, align: SunmiPrintAlign.CENTER);
+      // Use SM (18px) for everything — one unit below the default MD (24px)
+      // that printRow falls back to after printText's initPrinter() reset.
+      final sm = SunmiStyle(fontSize: SunmiFontSize.SM);
+      final smBold = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true);
+      final smCenter = SunmiStyle(fontSize: SunmiFontSize.SM, align: SunmiPrintAlign.CENTER);
+      final smBoldCenter = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true, align: SunmiPrintAlign.CENTER);
 
       // Header — combine business info into one printText call to avoid
       // the initPrinter() reset (and extra spacing) between each line.
@@ -85,19 +87,19 @@ class ThermalPrinterService {
       final now = DateTime.now();
       final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
       await SunmiPrinter.printText('Date: $dateStr\n', style: sm);
-      await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'Receipt: $receiptNo', width: 20, align: SunmiPrintAlign.LEFT),
-        ColumnMaker(text: 'Cashier: $cashier', width: 12, align: SunmiPrintAlign.RIGHT),
-      ]);
+      await SunmiPrinter.printText('Receipt: $receiptNo\n', style: sm);
+      await SunmiPrinter.printText('Cashier: $cashier\n', style: sm);
       await SunmiPrinter.line();
 
-      // Items — single row per item: name on left, qty x price on right
+      // Items — set font to SM before each printRow since printText's
+      // initPrinter() resets the font to MD (24) which causes overlap.
       for (final item in items) {
         final name = item['name'] as String? ?? '';
         final qty = item['quantity'] as int? ?? 1;
         final price = (item['price'] as num?)?.toDouble() ?? 0.0;
         final lineTotal = price * qty;
 
+        await SunmiPrinter.setFontSize(SunmiFontSize.SM);
         await SunmiPrinter.printRow(cols: [
           ColumnMaker(
             text: '${qty}x $name',
@@ -115,14 +117,17 @@ class ThermalPrinterService {
       await SunmiPrinter.line();
 
       // Totals
+      await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
         ColumnMaker(text: 'Subtotal', width: 20, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: subtotal.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
+      await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
         ColumnMaker(text: 'Discount', width: 20, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: '-${discount.toStringAsFixed(2)}', width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
+      await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
         ColumnMaker(text: 'TOTAL', width: 20, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: total.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),

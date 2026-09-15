@@ -12,6 +12,7 @@ import '../../models/sale.dart';
 import '../../models/shop_order.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
+import '../payments/payment_screen.dart';
 
 class HeldCart {
   final String id;
@@ -634,10 +635,94 @@ class _SalesScreenState extends State<SalesScreen> {
 
   double get totalAmount => _cart.fold(0, (sum, item) => sum + item.totalPrice);
 
+  Future<String?> _showPaymentMethodDialog(double amount) {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Payment Method'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Total: $currencySymbol${amount.toStringAsFixed(2)}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _paymentMethodOption(
+              icon: Icons.money,
+              label: 'Cash',
+              subtitle: 'Receive cash payment',
+              value: 'cash',
+            ),
+            const Divider(),
+            _paymentMethodOption(
+              icon: Icons.credit_card,
+              label: 'Online Payment',
+              subtitle: 'Flutterwave payment link',
+              value: 'online',
+            ),
+            const Divider(),
+            _paymentMethodOption(
+              icon: Icons.account_balance,
+              label: 'Bank Transfer',
+              subtitle: 'Direct bank transfer',
+              value: 'bank_transfer',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentMethodOption({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required String value,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.primaryColor),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => Navigator.pop(context, value),
+    );
+  }
+
   Future<void> _completeSale() async {
     if (_cart.isEmpty) {
       _showError('Cart is empty');
       return;
+    }
+
+    final saleTotal = totalAmount;
+    final customerName = _customerNameController.text.trim();
+    final customerPhone = _customerPhoneController.text.trim();
+
+    // Show payment method selection dialog
+    final paymentMethod = await _showPaymentMethodDialog(saleTotal);
+    if (paymentMethod == null) return; // User cancelled
+
+    if (paymentMethod == 'online') {
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            prefillAmount: saleTotal,
+            prefillCustomerName: customerName.isNotEmpty ? customerName : null,
+            prefillCustomerPhone: customerPhone.isNotEmpty ? customerPhone : null,
+            prefillDescription: 'POS Sale - ${_cart.length} items',
+          ),
+        ),
+      );
+      // After returning from payment screen, complete the sale
     }
 
     setState(() => _isLoading = true);

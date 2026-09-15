@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../models/sale.dart';
 import '../models/invoice.dart';
 import '../models/user.dart';
+import 'thermal_printer_service.dart';
 
 class PdfService {
   static pw.Font? _notoFont;
@@ -205,11 +206,32 @@ class PdfService {
     await _sharePdf(pdf, 'Receipt_${sale.id.substring(0, 8)}');
   }
 
+  /// Prints a single-sale receipt. On Sunmi hardware this goes directly to
+  /// the built-in thermal printer via [ThermalPrinterService] — no Android
+  /// print dialog. Only falls back to generating/printing a PDF (which
+  /// triggers the system print picker) on non-Sunmi devices.
   static Future<void> printThermalReceipt(Sale sale, User user) async {
+    final isSunmi = await ThermalPrinterService.isSunmiDevice();
+    if (isSunmi) {
+      await ThermalPrinterService.printReceipt(
+        businessName: user.businessName,
+        address: user.businessAddress,
+        phone: user.phoneNumber,
+        receiptNo: sale.id.substring(0, 8).toUpperCase(),
+        cashier: sale.enteredByStaffName ?? 'Owner',
+        items: [
+          {'name': sale.item, 'quantity': sale.quantity, 'price': sale.price},
+        ],
+        subtotal: sale.price * sale.quantity,
+        discount: sale.discount,
+        total: sale.total,
+      );
+      return;
+    }
+
     await _loadFont();
     final subtotal = sale.price * sale.quantity;
     final discount = sale.discount;
-    final logo = _buildLogo(user);
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: _notoFont!,
@@ -226,7 +248,9 @@ class PdfService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              if (logo != null) ...[logo, pw.SizedBox(height: 10)],
+              // No logo image on thermal receipts — a color/greyscale logo
+              // doesn't render well on a monochrome thermal printer. The
+              // bold business name below serves as the branding instead.
               pw.Center(
                 child: pw.Text(
                   user.businessName,
@@ -261,18 +285,17 @@ class PdfService {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(sale.date)}',
-                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
-                  ),
-                  pw.Text(
-                    'Receipt #: ${sale.id.substring(0, 8).toUpperCase()}',
-                    style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
-                  ),
-                ],
+              // Stacked (not side-by-side) — the 58mm roll is too narrow to
+              // fit "Date: ..." and "Receipt #: ..." on one row without the
+              // text overlapping/clipping.
+              pw.Text(
+                'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(sale.date)}',
+                style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Receipt #: ${sale.id.substring(0, 8).toUpperCase()}',
+                style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
               ),
               pw.SizedBox(height: 12),
               pw.Divider(color: PdfColor.fromHex('#CBD5E1'), height: 1),
@@ -766,6 +789,10 @@ class PdfService {
     await _sharePdf(pdf, 'Receipt_${receiptId.substring(0, 8)}');
   }
 
+  /// Prints a multi-item cart receipt. On Sunmi hardware this goes
+  /// directly to the built-in thermal printer via [ThermalPrinterService] —
+  /// no Android print dialog. Only falls back to generating/printing a PDF
+  /// (which triggers the system print picker) on non-Sunmi devices.
   static Future<void> printThermalGroupedReceipt({
     required String receiptId,
     required DateTime date,
@@ -776,6 +803,31 @@ class PdfService {
     String? customerPhone,
     String? customerAddress,
   }) async {
+    final isSunmi = await ThermalPrinterService.isSunmiDevice();
+    if (isSunmi) {
+      final subtotal = items.fold(0.0, (sum, item) => sum + (item.unitPrice * item.quantity));
+      final discount = items.fold(0.0, (sum, item) => sum + item.discount);
+      final total = items.fold(0.0, (sum, item) => sum + item.totalPrice);
+      await ThermalPrinterService.printReceipt(
+        businessName: user.businessName,
+        address: user.businessAddress,
+        phone: user.phoneNumber,
+        receiptNo: receiptId.substring(0, 8).toUpperCase(),
+        cashier: enteredByStaffName ?? 'Owner',
+        items: items.map((item) => {
+          'name': item.itemName,
+          'quantity': item.quantity,
+          'price': item.unitPrice,
+        }).toList(),
+        subtotal: subtotal,
+        discount: discount,
+        total: total,
+        customerName: customerName,
+        customerPhone: customerPhone,
+      );
+      return;
+    }
+
     await _loadFont();
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
@@ -787,13 +839,14 @@ class PdfService {
     );
     final total = items.fold(0.0, (sum, item) => sum + item.totalPrice);
 
-    final logo = _buildLogo(user);
     pdf.addPage(
       pw.MultiPage(
         pageFormat: thermal58,
         build: (pw.Context context) {
           return [
-            if (logo != null) ...[logo, pw.SizedBox(height: 10)],
+            // No logo image on thermal receipts — a color/greyscale logo
+            // doesn't render well on a monochrome thermal printer. The
+            // bold business name below serves as the branding instead.
             pw.Center(
               child: pw.Text(
                 user.businessName,
@@ -828,18 +881,17 @@ class PdfService {
               ),
             ),
             pw.SizedBox(height: 8),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(date)}',
-                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
-                ),
-                pw.Text(
-                  'Receipt #: ${receiptId.substring(0, 8).toUpperCase()}',
-                  style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
-                ),
-              ],
+            // Stacked (not side-by-side) — the 58mm roll is too narrow to
+            // fit "Date: ..." and "Receipt #: ..." on one row without the
+            // text overlapping/clipping.
+            pw.Text(
+              'Date: ${DateFormat('dd MMM yyyy, HH:mm').format(date)}',
+              style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
+            ),
+            pw.SizedBox(height: 2),
+            pw.Text(
+              'Receipt #: ${receiptId.substring(0, 8).toUpperCase()}',
+              style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex('#475569')),
             ),
             if (enteredByStaffName != null && enteredByStaffName.isNotEmpty) ...[
               pw.SizedBox(height: 6),

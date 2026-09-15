@@ -5,6 +5,12 @@ class ThermalPrinterService {
   static bool _initialized = false;
   static bool _isSunmiDevice = false;
 
+  // The regular Sunmi V2 has a built-in 58mm thermal printer, which fits
+  // ~32 half-width characters per line at the default font size. Column
+  // widths below are sized in characters (not flex weights) to match this,
+  // so item/price columns align correctly on the physical receipt.
+  static const int _lineWidthChars = 32;
+
   static Future<bool> _init() async {
     if (_initialized) return _isSunmiDevice;
     try {
@@ -80,7 +86,9 @@ class ThermalPrinterService {
       await SunmiPrinter.line(type: '-');
       await SunmiPrinter.lineWrap(1);
 
-      // Items
+      // Items — name on its own full-width line, then qty/price aligned in
+      // columns sized for the 58mm/32-char printable width so the line
+      // total lands flush right regardless of digit count.
       for (final item in items) {
         final name = item['name'] as String? ?? '';
         final qty = item['quantity'] as int? ?? 1;
@@ -89,26 +97,62 @@ class ThermalPrinterService {
 
         await SunmiPrinter.printText('$name\n',
             style: SunmiTextStyle(fontSize: 18));
-        await SunmiPrinter.printText(
-            '  x$qty  ${lineTotal.toStringAsFixed(2)}\n',
-            style: SunmiTextStyle(fontSize: 18));
+        await SunmiPrinter.printRow(cols: [
+          SunmiColumn(
+            text: '  ${qty}x @ ${price.toStringAsFixed(2)}',
+            width: _lineWidthChars - 12,
+            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+          ),
+          SunmiColumn(
+            text: lineTotal.toStringAsFixed(2),
+            width: 12,
+            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+          ),
+        ]);
       }
 
       await SunmiPrinter.line(type: '-');
       await SunmiPrinter.lineWrap(1);
 
-      // Totals
-      await SunmiPrinter.printText(
-          'Subtotal: ${subtotal.toStringAsFixed(2)}\n',
-          style: SunmiTextStyle(fontSize: 18));
+      // Totals — same left-label/right-value column split as the items.
+      await SunmiPrinter.printRow(cols: [
+        SunmiColumn(
+          text: 'Subtotal',
+          width: _lineWidthChars - 12,
+          style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+        ),
+        SunmiColumn(
+          text: subtotal.toStringAsFixed(2),
+          width: 12,
+          style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+        ),
+      ]);
       if (discount > 0) {
-        await SunmiPrinter.printText(
-            'Discount: -${discount.toStringAsFixed(2)}\n',
-            style: SunmiTextStyle(fontSize: 18));
+        await SunmiPrinter.printRow(cols: [
+          SunmiColumn(
+            text: 'Discount',
+            width: _lineWidthChars - 12,
+            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.LEFT),
+          ),
+          SunmiColumn(
+            text: '-${discount.toStringAsFixed(2)}',
+            width: 12,
+            style: SunmiTextStyle(fontSize: 18, align: SunmiPrintAlign.RIGHT),
+          ),
+        ]);
       }
-      await SunmiPrinter.printText(
-          'TOTAL: ${total.toStringAsFixed(2)}\n',
-          style: SunmiTextStyle(bold: true, fontSize: 28));
+      await SunmiPrinter.printRow(cols: [
+        SunmiColumn(
+          text: 'TOTAL',
+          width: _lineWidthChars - 12,
+          style: SunmiTextStyle(bold: true, fontSize: 28, align: SunmiPrintAlign.LEFT),
+        ),
+        SunmiColumn(
+          text: total.toStringAsFixed(2),
+          width: 12,
+          style: SunmiTextStyle(bold: true, fontSize: 28, align: SunmiPrintAlign.RIGHT),
+        ),
+      ]);
 
       await SunmiPrinter.line(type: '-');
       await SunmiPrinter.lineWrap(1);

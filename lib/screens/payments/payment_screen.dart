@@ -8,7 +8,18 @@ import '../../utils/theme.dart';
 import '../../models/user.dart';
 
 class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+  final double? prefillAmount;
+  final String? prefillCustomerName;
+  final String? prefillCustomerPhone;
+  final String? prefillDescription;
+
+  const PaymentScreen({
+    super.key,
+    this.prefillAmount,
+    this.prefillCustomerName,
+    this.prefillCustomerPhone,
+    this.prefillDescription,
+  });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -41,7 +52,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _isLoading = false;
       if (user != null) {
         _emailController.text = user.email;
-        _nameController.text = user.businessName;
+        _nameController.text = widget.prefillCustomerName ?? user.businessName;
+      }
+      if (widget.prefillAmount != null) {
+        _amountController.text = widget.prefillAmount!.toStringAsFixed(2);
+      }
+      if (widget.prefillCustomerPhone != null) {
+        _phoneController.text = widget.prefillCustomerPhone!;
+      }
+      if (widget.prefillDescription != null) {
+        _descriptionController.text = widget.prefillDescription!;
       }
     });
     if (user != null) {

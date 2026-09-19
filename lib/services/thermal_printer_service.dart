@@ -39,7 +39,7 @@ class ThermalPrinterService {
   // the entire receipt at a uniform SM (18px) size.
   static Future<void> _printLine() async {
     await SunmiPrinter.printText(
-      List.filled(43, '-').join(),
+      List.filled(42, '-').join(),
       style: SunmiStyle(fontSize: SunmiFontSize.SM),
     );
   }
@@ -122,7 +122,7 @@ class ThermalPrinterService {
         await SunmiPrinter.printRow(cols: [
           ColumnMaker(
             text: '  ${qty} x ${price.toStringAsFixed(2)}',
-            width: 32,
+            width: 30,
             align: SunmiPrintAlign.LEFT,
           ),
           ColumnMaker(
@@ -138,17 +138,17 @@ class ThermalPrinterService {
       // Totals
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'Subtotal', width: 32, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'Subtotal', width: 30, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: subtotal.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'Discount', width: 32, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'Discount', width: 30, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: '-${discount.toStringAsFixed(2)}', width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'TOTAL', width: 32, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'TOTAL', width: 30, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: total.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
 

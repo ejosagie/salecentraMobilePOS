@@ -115,37 +115,22 @@ class ThermalPrinterService {
         final lineTotal = price * qty;
         final itemText = '${qty}x $name';
 
-        if (itemText.length <= 26) {
-          await SunmiPrinter.setFontSize(SunmiFontSize.SM);
-          await SunmiPrinter.printRow(cols: [
-            ColumnMaker(
-              text: itemText,
-              width: 28,
-              align: SunmiPrintAlign.LEFT,
-            ),
-            ColumnMaker(
-              text: lineTotal.toStringAsFixed(2),
-              width: 12,
-              align: SunmiPrintAlign.RIGHT,
-            ),
-          ]);
-        } else {
-          // Long item — name on its own line, then qty x price = total
-          await SunmiPrinter.printText(itemText, style: sm);
-          await SunmiPrinter.setFontSize(SunmiFontSize.SM);
-          await SunmiPrinter.printRow(cols: [
-            ColumnMaker(
-              text: '  ${qty} x ${price.toStringAsFixed(2)}',
-              width: 28,
-              align: SunmiPrintAlign.LEFT,
-            ),
-            ColumnMaker(
-              text: lineTotal.toStringAsFixed(2),
-              width: 12,
-              align: SunmiPrintAlign.RIGHT,
-            ),
-          ]);
-        }
+        // Two-line format for every item: name on its own line, then
+        // qty x price + right-aligned line total on the next line.
+        await SunmiPrinter.printText(itemText, style: sm);
+        await SunmiPrinter.setFontSize(SunmiFontSize.SM);
+        await SunmiPrinter.printRow(cols: [
+          ColumnMaker(
+            text: '  ${qty} x ${price.toStringAsFixed(2)}',
+            width: 28,
+            align: SunmiPrintAlign.LEFT,
+          ),
+          ColumnMaker(
+            text: lineTotal.toStringAsFixed(2),
+            width: 12,
+            align: SunmiPrintAlign.RIGHT,
+          ),
+        ]);
       }
 
       await _printLine();

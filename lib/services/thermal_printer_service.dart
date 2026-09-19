@@ -39,7 +39,7 @@ class ThermalPrinterService {
   // the entire receipt at a uniform SM (18px) size.
   static Future<void> _printLine() async {
     await SunmiPrinter.printText(
-      List.filled(31, '-').join(),
+      List.filled(39, '-').join(),
       style: SunmiStyle(fontSize: SunmiFontSize.SM),
     );
   }
@@ -115,12 +115,12 @@ class ThermalPrinterService {
         final lineTotal = price * qty;
         final itemText = '${qty}x $name';
 
-        if (itemText.length <= 18) {
+        if (itemText.length <= 26) {
           await SunmiPrinter.setFontSize(SunmiFontSize.SM);
           await SunmiPrinter.printRow(cols: [
             ColumnMaker(
               text: itemText,
-              width: 20,
+              width: 28,
               align: SunmiPrintAlign.LEFT,
             ),
             ColumnMaker(
@@ -136,7 +136,7 @@ class ThermalPrinterService {
           await SunmiPrinter.printRow(cols: [
             ColumnMaker(
               text: '  ${qty} x ${price.toStringAsFixed(2)}',
-              width: 20,
+              width: 28,
               align: SunmiPrintAlign.LEFT,
             ),
             ColumnMaker(
@@ -153,17 +153,17 @@ class ThermalPrinterService {
       // Totals
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'Subtotal', width: 20, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'Subtotal', width: 28, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: subtotal.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'Discount', width: 20, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'Discount', width: 28, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: '-${discount.toStringAsFixed(2)}', width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
       await SunmiPrinter.setFontSize(SunmiFontSize.SM);
       await SunmiPrinter.printRow(cols: [
-        ColumnMaker(text: 'TOTAL', width: 20, align: SunmiPrintAlign.LEFT),
+        ColumnMaker(text: 'TOTAL', width: 28, align: SunmiPrintAlign.LEFT),
         ColumnMaker(text: total.toStringAsFixed(2), width: 12, align: SunmiPrintAlign.RIGHT),
       ]);
 

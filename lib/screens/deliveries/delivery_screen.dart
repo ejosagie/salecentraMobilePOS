@@ -215,7 +215,10 @@ class _DeliveryScreenState extends State<DeliveryScreen>
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => DeliveryDetailScreen(deliveryId: deliveryId),
+              builder: (_) => DeliveryDetailScreen(
+                deliveryId: deliveryId,
+                userId: _user!.id,
+              ),
             ),
           );
           _loadDeliveries();

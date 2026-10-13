@@ -38,6 +38,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _isLoading = true;
   bool _isCreating = false;
   List<Map<String, dynamic>> _recentLinks = [];
+  String? _createdLink;
+  String? _createdTxRef;
+  String? _smsStatus; // 'sending', 'sent', 'failed'
+  String? _smsMessage;
+  bool _isSendingSms = false;
 
   @override
   void initState() {
@@ -103,7 +108,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final link = response['payment_link'] as String?;
         final txRef = response['tx_ref'] as String?;
         if (link != null) {
-          _showLinkDialog(link, txRef ?? '');
+          setState(() {
+            _createdLink = link;
+            _createdTxRef = txRef ?? '';
+            _smsStatus = null;
+            _smsMessage = null;
+          });
           _amountController.clear();
           _descriptionController.clear();
           _loadPaymentLinks();
@@ -120,53 +130,59 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  void _showLinkDialog(String link, String txRef) {
-    showDialog(
+  Future<void> _sendSms(String txRef, String phone) async {
+    if (_user == null) return;
+    setState(() {
+      _isSendingSms = true;
+      _smsStatus = 'sending';
+      _smsMessage = null;
+    });
+    try {
+      final response = await ApiService.post('/pos/payment-link/send-sms', {
+        'user_id': _user!.id,
+        'tx_ref': txRef,
+        'phone_number': phone,
+      });
+      if (mounted) {
+        if (response['success'] == true) {
+          setState(() {
+            _smsStatus = 'sent';
+            _smsMessage = 'SMS sent successfully to ${response['phone'] ?? phone}';
+          });
+        } else {
+          setState(() {
+            _smsStatus = 'failed';
+            _smsMessage = 'SMS failed: ${response['error']}';
+          });
+        }
+        _loadPaymentLinks();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _smsStatus = 'failed';
+          _smsMessage = 'SMS failed: $e';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isSendingSms = false);
+    }
+  }
+
+  Future<bool?> _confirmPaymentDialog() {
+    return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Payment Link Created'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Share this link with your customer:'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SelectableText(
-                link,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('Ref: $txRef', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
+        title: const Text('Confirm Payment'),
+        content: const Text('Did the customer complete the online payment?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: link));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Link copied to clipboard')),
-              );
-            },
-            icon: const Icon(Icons.copy),
-            label: const Text('Copy'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              await launchUrl(Uri.parse(link), mode: LaunchMode.inAppBrowserView);
-            },
-            icon: const Icon(Icons.open_in_browser),
-            label: const Text('Open'),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes, Paid'),
           ),
         ],
       ),
@@ -291,6 +307,116 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
             ),
+            if (_createdLink != null) ...[
+              const SizedBox(height: 16),
+              Card(
+                color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, color: AppTheme.success),
+                          const SizedBox(width: 8),
+                          const Text('Payment Link Created', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                        ),
+                        child: SelectableText(
+                          _createdLink!,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Ref: $_createdTxRef', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isSendingSms
+                                  ? null
+                                  : () {
+                                      final phone = _phoneController.text.trim();
+                                      if (phone.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Enter a customer phone number first')),
+                                        );
+                                        return;
+                                      }
+                                      _sendSms(_createdTxRef!, phone);
+                                    },
+                              icon: _isSendingSms
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.sms),
+                              label: Text(_isSendingSms ? 'Sending...' : 'Send SMS'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final paid = await _confirmPaymentDialog();
+                                if (!context.mounted) return;
+                                if (paid == true) {
+                                  Navigator.pop(context, true);
+                                }
+                                // No → stay on this page; link stays visible
+                              },
+                              icon: const Icon(Icons.arrow_forward),
+                              label: const Text('Next'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_smsStatus != null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              _smsStatus == 'sent'
+                                  ? Icons.check_circle
+                                  : (_smsStatus == 'sending' ? Icons.hourglass_top : Icons.error),
+                              size: 16,
+                              color: _smsStatus == 'sent'
+                                  ? AppTheme.success
+                                  : (_smsStatus == 'sending' ? Colors.orange : AppTheme.error),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _smsMessage ?? (_smsStatus == 'sending' ? 'Sending SMS...' : ''),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _smsStatus == 'sent'
+                                      ? AppTheme.success
+                                      : (_smsStatus == 'sending' ? Colors.orange : AppTheme.error),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             if (_recentLinks.isNotEmpty) ...[
               const Text('Recent Payment Links', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -307,17 +433,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   title: Text('\u20a6${(link['amount'] as num?)?.toDouble().toStringAsFixed(0) ?? '0'}'),
                   subtitle: Text(
-                    '${link['customer_name'] ?? 'N/A'} • ${link['tx_ref'] ?? ''}',
+                    '${link['customer_name'] ?? 'N/A'} • ${link['tx_ref'] ?? ''}'
+                    '${link['sms_status'] != null ? ' • SMS: ${link['sms_status']}' : ''}',
                     style: const TextStyle(fontSize: 12),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.open_in_browser),
-                    onPressed: () async {
-                      final url = link['payment_link'] as String?;
-                      if (url != null) {
-                        await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
-                      }
-                    },
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.sms),
+                        onPressed: () {
+                          final phone = (link['customer_phone'] as String?)?.trim() ?? '';
+                          if (phone.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('No customer phone saved for this link')),
+                            );
+                            return;
+                          }
+                          _sendSms(link['tx_ref'] as String, phone);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.open_in_browser),
+                        onPressed: () async {
+                          final url = link['payment_link'] as String?;
+                          if (url != null) {
+                            await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
               )),

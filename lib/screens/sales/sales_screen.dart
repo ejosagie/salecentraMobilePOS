@@ -649,7 +649,7 @@ class _SalesScreenState extends State<SalesScreen> {
             const SizedBox(height: 16),
             _paymentMethodOption(
               icon: Icons.money,
-              label: 'Cash',
+              label: 'Cash/Card Payment (POS)',
               subtitle: 'Receive cash payment',
               value: 'cash',
             ),
@@ -710,7 +710,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (paymentMethod == 'online') {
       if (!mounted) return;
-      await Navigator.push(
+      final paid = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (_) => PaymentScreen(
@@ -721,7 +721,10 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
         ),
       );
-      // After returning from payment screen, complete the sale
+      if (!mounted) return;
+      if (paid != true) {
+        return; // Not paid — abort sale, cart preserved so merchant can retry
+      }
     }
 
     setState(() => _isLoading = true);
@@ -845,7 +848,7 @@ class _SalesScreenState extends State<SalesScreen> {
       case 'bank_transfer':
         return 'Bank Transfer';
       default:
-        return 'Cash';
+        return 'Cash/Card Payment (POS)';
     }
   }
 

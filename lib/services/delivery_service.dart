@@ -165,6 +165,31 @@ class DeliveryService {
     }
   }
 
+  static Future<Map<String, dynamic>> retryDelivery({
+    required String deliveryId,
+    required String userId,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/deliveries/$deliveryId/retry'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      ).timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return data;
+      }
+      return {
+        'success': false,
+        'status_code': response.statusCode,
+        'error': data['error'] ?? data['message'] ?? 'Retry failed',
+      };
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
   static Future<Map<String, dynamic>> initiatePayment({
     required String deliveryId,
     required String email,

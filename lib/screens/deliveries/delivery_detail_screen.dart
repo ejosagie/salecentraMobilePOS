@@ -6,8 +6,10 @@ import '../../utils/theme.dart';
 
 class DeliveryDetailScreen extends StatefulWidget {
   final String deliveryId;
+  final String userId;
 
-  const DeliveryDetailScreen({super.key, required this.deliveryId});
+  const DeliveryDetailScreen(
+      {super.key, required this.deliveryId, required this.userId});
 
   @override
   State<DeliveryDetailScreen> createState() => _DeliveryDetailScreenState();
@@ -18,6 +20,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   bool _isLoading = true;
   bool _isCancelling = false;
   bool _isVerifying = false;
+  bool _isRetrying = false;
   String? _txRef;
 
   @override
@@ -200,6 +203,28 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                 ),
               ),
             ],
+            if (_canRetry) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isRetrying ? null : _retryDelivery,
+                  icon: _isRetrying
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh),
+                  label: const Text('Re-dispatch Delivery'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
           ],
         ),
@@ -363,6 +388,96 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
       }
     } finally {
       if (mounted) setState(() => _isVerifying = false);
+    }
+  }
+
+  bool get _canRetry {
+    final d = _delivery;
+    if (d == null) return false;
+    if (d['status'] != 'confirmed') return false;
+    final riderName = d['rider_name'];
+    final riderId = d['rider_id'];
+    return riderName == null && riderId == null;
+  }
+
+  Future<void> _retryDelivery() async {
+    final d = _delivery;
+    if (d == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Re-dispatch Delivery?'),
+        content: const Text(
+          'This cancels the current order and creates a fresh one with the same details. Your payment is reused — you will not be charged again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Re-dispatch'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isRetrying = true);
+    try {
+      final result = await DeliveryService.retryDelivery(
+        deliveryId: widget.deliveryId,
+        userId: widget.userId,
+      );
+      if (result['success'] == true) {
+        if (mounted) {
+          setState(() {
+            final updated = Map<String, dynamic>.from(d);
+            if (result['new_reference'] != null) {
+              updated['reference'] = result['new_reference'];
+              updated['gokada_reference'] = result['new_reference'];
+            }
+            if (result['pickup_otp'] != null) {
+              updated['pickup_otp'] = result['pickup_otp'];
+            }
+            if (result['dropoff_otp'] != null) {
+              updated['dropoff_otp'] = result['dropoff_otp'];
+            }
+            if (result['tracking_link'] != null) {
+              updated['tracking_url'] = result['tracking_link'];
+            }
+            _delivery = updated;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Delivery re-dispatched. A new pilot will be assigned.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          await _loadDelivery();
+        }
+      } else {
+        final statusCode = result['status_code'];
+        final error = result['error'] ?? 'Re-dispatch failed';
+        final message = statusCode == 403
+            ? 'Delivery does not belong to this user'
+            : error.toString();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Re-dispatch failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRetrying = false);
     }
   }
 

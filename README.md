@@ -2,7 +2,7 @@
 
 A Flutter POS application for SaleCentra — built specifically for Sunmi Android POS terminals.
 
-**Current Version: 1.0.0+1**
+**Current Version: 1.1.0+2**
 
 ## Features
 

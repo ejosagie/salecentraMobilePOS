@@ -87,7 +87,7 @@ class AppIcon extends StatelessWidget {
         'assets/images/app_icon.png',
         width: size,
         height: size,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             width: size,

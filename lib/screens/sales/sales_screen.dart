@@ -4,6 +4,7 @@ import '../../services/remote_database_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/thermal_printer_service.dart';
 import '../../services/offline_sync_service.dart';
+import '../../services/cart_service.dart';
 import '../../services/offline_service.dart';
 import '../../models/customer.dart';
 import '../../models/inventory.dart';
@@ -12,28 +13,6 @@ import '../../models/shop_order.dart';
 import '../../models/user.dart';
 import '../../utils/theme.dart';
 import '../payments/payment_screen.dart';
-
-class HeldCart {
-  final String id;
-  final List<CartItem> items;
-  final String? customerName;
-  final String? customerPhone;
-  final String? customerAddress;
-  final DateTime heldAt;
-  final String label;
-
-  HeldCart({
-    required this.id,
-    required this.items,
-    this.customerName,
-    this.customerPhone,
-    this.customerAddress,
-    required this.heldAt,
-    this.label = '',
-  });
-
-  double get total => items.fold(0.0, (sum, item) => sum + item.totalPrice);
-}
 
 class SalesScreen extends StatefulWidget {
   final bool isStaffMode;
@@ -59,8 +38,6 @@ class _SalesScreenState extends State<SalesScreen> {
   
   User? _user;
   List<InventoryItem> _inventory = [];
-  List<CartItem> _cart = [];
-  List<HeldCart> _heldCarts = [];
   List<CartItem> _lastCompletedSaleItems = [];
   String? _lastCompletedReceiptId;
   DateTime? _lastCompletedSaleDate;
@@ -182,21 +159,21 @@ class _SalesScreenState extends State<SalesScreen> {
   String get currencySymbol => _user?.currencySymbol ?? '₦';
 
   void _addToCart(InventoryItem item) {
-    final existingIndex = _cart.indexWhere((c) => c.inventoryItem.id == item.id);
+    final existingIndex = CartService.instance.cart.indexWhere((c) => c.inventoryItem.id == item.id);
     
     if (existingIndex >= 0) {
-      if (_cart[existingIndex].quantity < item.stock) {
-        setState(() => _cart[existingIndex].quantity++);
+      if (CartService.instance.cart[existingIndex].quantity < item.stock) {
+        setState(() => CartService.instance.cart[existingIndex].quantity++);
       } else {
         _showError('Not enough stock available');
       }
     } else {
-      setState(() => _cart.add(CartItem(inventoryItem: item)));
+      setState(() => CartService.instance.cart.add(CartItem(inventoryItem: item)));
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${item.item} added to cart (${_cart.length} item types)'),
+        content: Text('${item.item} added to cart (${CartService.instance.cart.length} item types)'),
         duration: const Duration(milliseconds: 900),
         action: SnackBarAction(
           label: 'View Cart',
@@ -211,11 +188,11 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _removeFromCart(int index) {
-    setState(() => _cart.removeAt(index));
+    setState(() => CartService.instance.cart.removeAt(index));
   }
 
   void _updateQuantity(int index, int delta) {
-    final item = _cart[index];
+    final item = CartService.instance.cart[index];
     final newQty = item.quantity + delta;
     
     if (newQty <= 0) {
@@ -281,15 +258,15 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _holdCurrentCart() {
-    if (_cart.isEmpty) {
+    if (CartService.instance.cart.isEmpty) {
       _showError('Cart is empty — nothing to hold.');
       return;
     }
     final customerName = _customerNameController.text.trim();
-    final label = customerName.isNotEmpty ? customerName : 'Cart ${_heldCarts.length + 1}';
+    final label = customerName.isNotEmpty ? customerName : 'Cart ${CartService.instance.heldCarts.length + 1}';
     final held = HeldCart(
       id: _uuid.v4(),
-      items: _cart
+      items: CartService.instance.cart
           .map((item) {
             final copy = CartItem(
               inventoryItem: item.inventoryItem,
@@ -311,8 +288,8 @@ class _SalesScreenState extends State<SalesScreen> {
       label: label,
     );
     setState(() {
-      _heldCarts.add(held);
-      _cart.clear();
+      CartService.instance.heldCarts.add(held);
+      CartService.instance.cart.clear();
       _clearCustomer();
       _selectedIndex = 0;
     });
@@ -330,12 +307,12 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _resumeHeldCart(int index) {
-    if (index < 0 || index >= _heldCarts.length) return;
-    if (_cart.isNotEmpty) {
+    if (index < 0 || index >= CartService.instance.heldCarts.length) return;
+    if (CartService.instance.cart.isNotEmpty) {
       _showError('Current cart must be empty or held before resuming another.');
       return;
     }
-    final held = _heldCarts[index];
+    final held = CartService.instance.heldCarts[index];
     final warnings = <String>[];
 
     // Refresh stock values from current inventory to avoid stale data
@@ -362,21 +339,21 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (held.items.isEmpty) {
       setState(() {
-        _heldCarts.removeAt(index);
+        CartService.instance.heldCarts.removeAt(index);
       });
       _showError('All items in this held cart are out of stock. Cart discarded.');
       return;
     }
 
     setState(() {
-      _cart = held.items;
+      CartService.instance.cart = held.items;
       if (held.customerName != null) {
         _customerNameController.text = held.customerName!;
         _showCustomerFields = true;
       }
       if (held.customerPhone != null) _customerPhoneController.text = held.customerPhone!;
       if (held.customerAddress != null) _customerAddressController.text = held.customerAddress!;
-      _heldCarts.removeAt(index);
+      CartService.instance.heldCarts.removeAt(index);
       _selectedIndex = 1;
     });
 
@@ -399,9 +376,9 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _deleteHeldCart(int index) {
-    if (index < 0 || index >= _heldCarts.length) return;
-    final held = _heldCarts[index];
-    setState(() => _heldCarts.removeAt(index));
+    if (index < 0 || index >= CartService.instance.heldCarts.length) return;
+    final held = CartService.instance.heldCarts[index];
+    setState(() => CartService.instance.heldCarts.removeAt(index));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Held cart "${held.label}" discarded.'),
@@ -411,7 +388,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _showHeldCartsDialog() {
-    if (_heldCarts.isEmpty) {
+    if (CartService.instance.heldCarts.isEmpty) {
       _showError('No held carts.');
       return;
     }
@@ -432,7 +409,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Held Carts (${_heldCarts.length})',
+                    'Held Carts (${CartService.instance.heldCarts.length})',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -444,7 +421,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 ],
               ),
               const Divider(),
-              if (_cart.isNotEmpty)
+              if (CartService.instance.cart.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(10),
@@ -468,9 +445,9 @@ class _SalesScreenState extends State<SalesScreen> {
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _heldCarts.length,
+                  itemCount: CartService.instance.heldCarts.length,
                   itemBuilder: (context, index) {
-                    final held = _heldCarts[index];
+                    final held = CartService.instance.heldCarts[index];
                     final timeStr =
                         '${held.heldAt.hour.toString().padLeft(2, '0')}:${held.heldAt.minute.toString().padLeft(2, '0')}';
                     final itemCount = held.items.fold(0, (sum, item) => sum + item.quantity);
@@ -506,7 +483,7 @@ class _SalesScreenState extends State<SalesScreen> {
                               onPressed: () {
                                 setModalState(() {});
                                 _deleteHeldCart(index);
-                                if (_heldCarts.isEmpty) Navigator.pop(context);
+                                if (CartService.instance.heldCarts.isEmpty) Navigator.pop(context);
                               },
                             ),
                           ],
@@ -524,7 +501,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _showDiscountDialog(int index) async {
-    final item = _cart[index];
+    final item = CartService.instance.cart[index];
     final controller = TextEditingController(
       text: item.discount > 0 ? item.discount.toStringAsFixed(2) : '',
     );
@@ -575,7 +552,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _showEditPriceDialog(int index) async {
-    final item = _cart[index];
+    final item = CartService.instance.cart[index];
     final controller = TextEditingController(
       text: item.unitPrice.toStringAsFixed(2),
     );
@@ -632,7 +609,7 @@ class _SalesScreenState extends State<SalesScreen> {
     });
   }
 
-  double get totalAmount => _cart.fold(0, (sum, item) => sum + item.totalPrice);
+  double get totalAmount => CartService.instance.cart.fold(0, (sum, item) => sum + item.totalPrice);
 
   Future<String?> _showPaymentMethodDialog(double amount) {
     return showDialog<String>(
@@ -695,7 +672,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _completeSale() async {
-    if (_cart.isEmpty) {
+    if (CartService.instance.cart.isEmpty) {
       _showError('Cart is empty');
       return;
     }
@@ -717,7 +694,7 @@ class _SalesScreenState extends State<SalesScreen> {
             prefillAmount: saleTotal,
             prefillCustomerName: customerName.isNotEmpty ? customerName : null,
             prefillCustomerPhone: customerPhone.isNotEmpty ? customerPhone : null,
-            prefillDescription: 'POS Sale - ${_cart.length} items',
+            prefillDescription: 'POS Sale - ${CartService.instance.cart.length} items',
           ),
         ),
       );
@@ -732,7 +709,7 @@ class _SalesScreenState extends State<SalesScreen> {
     try {
       final now = DateTime.now();
       final receiptId = _uuid.v4();
-      _lastCompletedSaleItems = _cart
+      _lastCompletedSaleItems = CartService.instance.cart
           .map((item) {
             final copy = CartItem(
               inventoryItem: item.inventoryItem,
@@ -752,7 +729,7 @@ class _SalesScreenState extends State<SalesScreen> {
       
       bool hadOfflineSale = false;
       
-      for (final cartItem in _cart) {
+      for (final cartItem in CartService.instance.cart) {
         // Record sale
         final sale = Sale(
           id: _uuid.v4(),
@@ -832,7 +809,7 @@ class _SalesScreenState extends State<SalesScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _cart.clear();
+          CartService.instance.cart.clear();
           _isLoading = false;
           _clearCustomer();
         });
@@ -958,7 +935,7 @@ class _SalesScreenState extends State<SalesScreen> {
             onPressed: () {
               Navigator.pop(context);
               setState(() {
-                _cart.clear();
+                CartService.instance.cart.clear();
                 _lastCompletedSaleItems.clear();
                 _lastCompletedReceiptId = null;
                 _lastCompletedSaleDate = null;
@@ -1026,11 +1003,11 @@ class _SalesScreenState extends State<SalesScreen> {
                 child: _buildTabButton('Items', 0, Icons.inventory_2_outlined),
               ),
               Expanded(
-                child: _buildTabButton('Cart (${_cart.length})', 1, Icons.shopping_cart_outlined),
+                child: _buildTabButton('Cart (${CartService.instance.cart.length})', 1, Icons.shopping_cart_outlined),
               ),
-              if (_heldCarts.isNotEmpty)
+              if (CartService.instance.heldCarts.isNotEmpty)
                 Expanded(
-                  child: _buildTabButton('Held (${_heldCarts.length})', 3, Icons.pause_circle),
+                  child: _buildTabButton('Held (${CartService.instance.heldCarts.length})', 3, Icons.pause_circle),
                 ),
               if (widget.isStaffMode && widget.isDefaultStaff)
                 Expanded(
@@ -1049,7 +1026,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       ? _buildHeldCartsView()
                       : _buildOrdersView(),
         ),
-        if (_selectedIndex == 0 && _cart.isNotEmpty)
+        if (_selectedIndex == 0 && CartService.instance.cart.isNotEmpty)
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             decoration: BoxDecoration(
@@ -1069,15 +1046,15 @@ class _SalesScreenState extends State<SalesScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () => setState(() => _selectedIndex = 1),
                   icon: const Icon(Icons.shopping_cart_checkout),
-                  label: Text('View Cart (${_cart.length})'),
+                  label: Text('View Cart (${CartService.instance.cart.length})'),
                 ),
               ),
             ),
           ),
         // Checkout bar
-        if (_selectedIndex == 1 && _cart.isNotEmpty)
+        if (_selectedIndex == 1 && CartService.instance.cart.isNotEmpty)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -1092,47 +1069,42 @@ class _SalesScreenState extends State<SalesScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Total',
-                          style: Theme.of(context).textTheme.bodySmall,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Total: $currencySymbol${totalAmount.toStringAsFixed(2)}',
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          '$currencySymbol${totalAmount.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  ElevatedButton.icon(
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
                     onPressed: _isLoading ? null : _holdCurrentCart,
-                    icon: const Icon(Icons.pause_circle_outline),
+                    icon: const Icon(Icons.pause_circle_outline, size: 18),
                     label: const Text('Hold'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ).merge(ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(Colors.grey.shade100),
-                      foregroundColor: WidgetStatePropertyAll(AppTheme.textPrimary),
-                    )),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _completeSale,
                     icon: _isLoading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Icon(Icons.check),
+                        : const Icon(Icons.check, size: 18),
                     label: const Text('Complete Sale'),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
                 ],
@@ -1145,7 +1117,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Widget _buildHeldCartsView() {
-    if (_heldCarts.isEmpty) {
+    if (CartService.instance.heldCarts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1172,9 +1144,9 @@ class _SalesScreenState extends State<SalesScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _heldCarts.length,
+      itemCount: CartService.instance.heldCarts.length,
       itemBuilder: (context, index) {
-        final held = _heldCarts[index];
+        final held = CartService.instance.heldCarts[index];
         final timeStr = '${held.heldAt.hour.toString().padLeft(2, '0')}:${held.heldAt.minute.toString().padLeft(2, '0')}';
         final itemCount = held.items.fold(0, (sum, item) => sum + item.quantity);
         return Card(
@@ -1285,10 +1257,13 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _filterProducts(String query) {
+    final q = query.trim().toLowerCase();
     setState(() {
-      _filteredInventory = _inventory
-          .where((item) => item.item.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      _filteredInventory = q.isEmpty
+          ? _inventory
+          : _inventory
+              .where((item) => item.item.toLowerCase().contains(q))
+              .toList();
     });
   }
 
@@ -1521,7 +1496,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Widget _buildCartView() {
-    if (_cart.isEmpty) {
+    if (CartService.instance.cart.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1546,13 +1521,13 @@ class _SalesScreenState extends State<SalesScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _cart.length + 1,
+      itemCount: CartService.instance.cart.length + 1,
       itemBuilder: (context, index) {
         if (index == 0) {
           return _buildCustomerSection();
         }
         final cartIndex = index - 1;
-        final item = _cart[cartIndex];
+        final item = CartService.instance.cart[cartIndex];
         final subtotal = item.unitPrice * item.quantity;
         return Card(
           margin: const EdgeInsets.only(bottom: 12),

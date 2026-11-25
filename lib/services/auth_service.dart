@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import 'api_service.dart';
+import 'cart_service.dart';
 
 class AuthService {
   static const String _currentUserKey = 'current_user';
@@ -185,6 +186,7 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    CartService.instance.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentUserKey);
     await prefs.remove(_isStaffLoginKey);

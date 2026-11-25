@@ -105,3 +105,25 @@ class CartItem {
   double get totalPrice => (unitPrice * quantity) - discount;
   String get itemName => inventoryItem.item;
 }
+
+class HeldCart {
+  final String id;
+  final List<CartItem> items;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerAddress;
+  final DateTime heldAt;
+  final String label;
+
+  HeldCart({
+    required this.id,
+    required this.items,
+    this.customerName,
+    this.customerPhone,
+    this.customerAddress,
+    required this.heldAt,
+    this.label = '',
+  });
+
+  double get total => items.fold(0.0, (sum, item) => sum + item.totalPrice);
+}

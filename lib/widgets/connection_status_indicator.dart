@@ -2,14 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/offline_service.dart';
 
 class ConnectionStatusIndicator extends StatefulWidget {
-  final bool isOnline;
-  final int offlineDaysRemaining;
-
-  const ConnectionStatusIndicator({
-    super.key,
-    required this.isOnline,
-    this.offlineDaysRemaining = 0,
-  });
+  const ConnectionStatusIndicator({super.key});
 
   @override
   State<ConnectionStatusIndicator> createState() => _ConnectionStatusIndicatorState();

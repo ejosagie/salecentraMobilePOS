@@ -114,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-          const ConnectionStatusIndicator(isOnline: true),
+          const ConnectionStatusIndicator(),
           const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

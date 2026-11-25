@@ -28,7 +28,8 @@ class RemoteDatabaseService {
     throw Exception(response['error'] ?? 'Failed to fetch inventory');
   }
 
-  Future<void> addInventoryItem(InventoryItem item) async {
+  /// Adds an item and returns the server-generated item id.
+  Future<String> addInventoryItem(InventoryItem item) async {
     final response = await ApiService.post('/inventory', {
       'user_id': item.userId,
       'item': item.item,
@@ -36,10 +37,12 @@ class RemoteDatabaseService {
       'cost_price': item.costPrice,
       'selling_price': item.sellingPrice,
       'expiry_date': item.expiryDate,
+      'low_stock_threshold': item.lowStockThreshold,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to add item');
     }
+    return response['item_id'] as String;
   }
 
   Future<void> updateInventoryItem(InventoryItem item) async {
@@ -49,9 +52,26 @@ class RemoteDatabaseService {
       'cost_price': item.costPrice,
       'selling_price': item.sellingPrice,
       'expiry_date': item.expiryDate,
+      'low_stock_threshold': item.lowStockThreshold,
     });
     if (!response['success']) {
       throw Exception(response['error'] ?? 'Failed to update item');
+    }
+  }
+
+  /// Persists an item's low-stock threshold via the bulk endpoint, which is
+  /// the only backend path that accepts low_stock_threshold. Best-effort:
+  /// callers should treat failures as non-fatal.
+  Future<void> setLowStockThreshold(String userId, String itemId, int threshold) async {
+    final response = await ApiService.post('/inventory/bulk', {
+      'user_id': userId,
+      'mode': 'set',
+      'items': [
+        {'id': itemId, 'low_stock_threshold': threshold},
+      ],
+    });
+    if (!response['success']) {
+      throw Exception(response['error'] ?? 'Failed to update low stock threshold');
     }
   }
 

@@ -182,7 +182,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 children: [
                   _buildSummaryChip('Total Items', _inventory.length.toString()),
                   const SizedBox(width: 8),
-                  _buildSummaryChip('Low Stock', _inventory.where((i) => i.stock < 10).length.toString()),
+                  _buildSummaryChip('Low Stock', _inventory.where((i) => i.stock <= i.lowStockThreshold).length.toString()),
                 ],
               ),
             ),
@@ -225,7 +225,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           itemCount: _filteredInventory.length,
                           itemBuilder: (context, index) {
                             final item = _filteredInventory[index];
-                            final isLowStock = item.stock < 10;
+                            final isLowStock = item.stock <= item.lowStockThreshold;
                             
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -440,6 +440,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _stockController = TextEditingController();
+  final _lowStockController = TextEditingController(text: '5');
   final _costController = TextEditingController();
   final _shippingController = TextEditingController(text: '0');
   final _otherExpensesController = TextEditingController(text: '0');
@@ -465,6 +466,7 @@ class _AddItemDialogState extends State<AddItemDialog> {
   void dispose() {
     _nameController.dispose();
     _stockController.dispose();
+    _lowStockController.dispose();
     _costController.dispose();
     _shippingController.dispose();
     _otherExpensesController.dispose();
@@ -487,9 +489,17 @@ class _AddItemDialogState extends State<AddItemDialog> {
         costPrice: double.parse(_costController.text),
         sellingPrice: double.parse(_sellingController.text),
         expiryDate: _expiryDate != null ? DateFormat('yyyy-MM-dd').format(_expiryDate!) : null,
+        lowStockThreshold: int.parse(_lowStockController.text),
       );
 
-      await _dbService.addInventoryItem(item);
+      // The standard add endpoint ignores low_stock_threshold, so persist it
+      // via the bulk endpoint (best-effort — the item is already added).
+      try {
+        final serverId = await _dbService.addInventoryItem(item);
+        await _dbService.setLowStockThreshold(widget.userId, serverId, item.lowStockThreshold);
+      } catch (_) {
+        // Non-fatal: threshold falls back to the default on next fetch
+      }
       
       if (mounted) {
         Navigator.pop(context);
@@ -531,6 +541,21 @@ class _AddItemDialogState extends State<AddItemDialog> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Stock is required';
+                  if (int.tryParse(value) == null) return 'Enter a valid number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _lowStockController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Low Stock Alert At',
+                  helperText: 'Warn when stock drops to this level',
+                  prefixIcon: Icon(Icons.warning_amber_outlined),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Threshold is required';
                   if (int.tryParse(value) == null) return 'Enter a valid number';
                   return null;
                 },
@@ -684,6 +709,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(text: widget.item.item);
   late final _stockController = TextEditingController(text: widget.item.stock.toString());
+  late final _lowStockController = TextEditingController(text: widget.item.lowStockThreshold.toString());
   late final _costController = TextEditingController(text: widget.item.costPrice.toString());
   late final _sellingController = TextEditingController(text: widget.item.sellingPrice.toString());
   final _dbService = RemoteDatabaseService();
@@ -702,6 +728,7 @@ class _EditItemDialogState extends State<EditItemDialog> {
   void dispose() {
     _nameController.dispose();
     _stockController.dispose();
+    _lowStockController.dispose();
     _costController.dispose();
     _sellingController.dispose();
     super.dispose();
@@ -719,9 +746,22 @@ class _EditItemDialogState extends State<EditItemDialog> {
         costPrice: double.parse(_costController.text),
         sellingPrice: double.parse(_sellingController.text),
         expiryDate: _expiryDate != null ? DateFormat('yyyy-MM-dd').format(_expiryDate!) : null,
+        lowStockThreshold: int.parse(_lowStockController.text),
       );
 
       await _dbService.updateInventoryItem(updatedItem);
+
+      // The standard update endpoint ignores low_stock_threshold, so persist it
+      // via the bulk endpoint (best-effort — the item is already updated).
+      try {
+        await _dbService.setLowStockThreshold(
+          widget.item.userId,
+          widget.item.id,
+          updatedItem.lowStockThreshold,
+        );
+      } catch (_) {
+        // Non-fatal: threshold falls back to the default on next fetch
+      }
       
       if (mounted) {
         Navigator.pop(context);
@@ -763,6 +803,21 @@ class _EditItemDialogState extends State<EditItemDialog> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Stock is required';
+                  if (int.tryParse(value) == null) return 'Enter a valid number';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _lowStockController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Low Stock Alert At',
+                  helperText: 'Warn when stock drops to this level',
+                  prefixIcon: Icon(Icons.warning_amber_outlined),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Threshold is required';
                   if (int.tryParse(value) == null) return 'Enter a valid number';
                   return null;
                 },

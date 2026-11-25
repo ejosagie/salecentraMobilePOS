@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ConnectivityService {
   static final Connectivity _connectivity = Connectivity();
-  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static Stream<bool> get onConnectivityChanged {
     return _connectivity.onConnectivityChanged.map((result) {

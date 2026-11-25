@@ -29,7 +29,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -75,6 +75,7 @@ class DatabaseService {
         stock INTEGER,
         cost_price REAL,
         selling_price REAL,
+        low_stock_threshold INTEGER DEFAULT 5,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     ''');
@@ -230,6 +231,7 @@ class DatabaseService {
         cost_price REAL,
         selling_price REAL,
         expiry_date TEXT,
+        low_stock_threshold INTEGER DEFAULT 5,
         cached_at TEXT
       )
     ''');
@@ -268,9 +270,14 @@ class DatabaseService {
           cost_price REAL,
           selling_price REAL,
           expiry_date TEXT,
+          low_stock_threshold INTEGER DEFAULT 5,
           cached_at TEXT
         )
       ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE inventory ADD COLUMN low_stock_threshold INTEGER DEFAULT 5');
+      await db.execute('ALTER TABLE cached_inventory ADD COLUMN low_stock_threshold INTEGER DEFAULT 5');
     }
   }
 
@@ -637,6 +644,7 @@ class DatabaseService {
         'cost_price': item.costPrice,
         'selling_price': item.sellingPrice,
         'expiry_date': item.expiryDate,
+        'low_stock_threshold': item.lowStockThreshold,
         'cached_at': now,
       });
     }
@@ -653,6 +661,7 @@ class DatabaseService {
       costPrice: m['cost_price'] as double,
       sellingPrice: m['selling_price'] as double,
       expiryDate: m['expiry_date'] as String?,
+      lowStockThreshold: m['low_stock_threshold'] as int? ?? 5,
     )).toList();
   }
 

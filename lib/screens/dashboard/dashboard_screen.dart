@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../../services/offline_service.dart';
 import '../../services/offline_sync_service.dart';
+import '../../models/inventory.dart';
 import '../../utils/theme.dart';
 import '../inventory/inventory_screen.dart';
 import '../sales/sales_screen.dart';
@@ -28,6 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _staffName;
   String? _userId;
   int _pendingSyncCount = 0;
+  List<InventoryItem> _lowStockItems = [];
 
   @override
   void initState() {
@@ -64,6 +65,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Cache inventory for offline use
     if (user != null) {
       _offlineSync.cacheInventory(user.id);
+      try {
+        final inventory = await _offlineSync.getInventoryWithFallback(user.id);
+        if (mounted) {
+          setState(() {
+            _lowStockItems =
+                inventory.where((i) => i.stock <= i.lowStockThreshold).toList();
+          });
+        }
+      } catch (_) {
+        // Best-effort — the warning is hidden if inventory can't be loaded
+      }
     }
   }
 
@@ -141,6 +153,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Column(
         children: [
           const ConnectionStatusBanner(),
+          if (_lowStockItems.isNotEmpty)
+            InkWell(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const InventoryScreen(),
+                ));
+              },
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${_lowStockItems.length} item${_lowStockItems.length == 1 ? '' : 's'} low on stock — tap to view',
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.orange, size: 20),
+                  ],
+                ),
+              ),
+            ),
           Expanded(
             child: GridView.count(
               padding: const EdgeInsets.all(24),

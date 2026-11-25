@@ -6,7 +6,6 @@ import 'package:sunmi_printer_plus/sunmi_style.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 
 class ThermalPrinterService {
-  static const int _lineWidthChars = 32;
   static bool _bindLock = false;
 
   /// Bind to the Sunmi printer. In v3.x, bindingPrinter() actually works.
@@ -80,7 +79,6 @@ class ThermalPrinterService {
       // Use SM (18px) for everything — one unit below the default MD (24px)
       // that printRow falls back to after printText's initPrinter() reset.
       final sm = SunmiStyle(fontSize: SunmiFontSize.SM);
-      final smBold = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true);
       final smCenter = SunmiStyle(fontSize: SunmiFontSize.SM, align: SunmiPrintAlign.CENTER);
       final smBoldCenter = SunmiStyle(fontSize: SunmiFontSize.SM, bold: true, align: SunmiPrintAlign.CENTER);
 

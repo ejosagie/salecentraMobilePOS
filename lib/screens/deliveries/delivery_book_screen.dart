@@ -625,7 +625,6 @@ class _DeliveryBookScreenState extends State<DeliveryBookScreen> {
 
   Widget _buildEstimateCard() {
     final customerFee = (_estimate!['customer_fee'] ?? 0).toDouble();
-    final riderCost = (_estimate!['rider_cost'] ?? 0).toDouble();
     final distance = (_estimate!['distance_km'] ?? 0).toDouble();
 
     return Card(

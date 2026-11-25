@@ -6,6 +6,7 @@ class InventoryItem {
   final double costPrice;
   final double sellingPrice;
   final String? expiryDate;
+  final int lowStockThreshold;
 
   InventoryItem({
     required this.id,
@@ -15,6 +16,7 @@ class InventoryItem {
     required this.costPrice,
     required this.sellingPrice,
     this.expiryDate,
+    this.lowStockThreshold = 5,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class InventoryItem {
       'cost_price': costPrice,
       'selling_price': sellingPrice,
       'expiry_date': expiryDate,
+      'low_stock_threshold': lowStockThreshold,
     };
   }
 
@@ -38,6 +41,7 @@ class InventoryItem {
       costPrice: map['cost_price'].toDouble(),
       sellingPrice: map['selling_price'].toDouble(),
       expiryDate: map['expiry_date'] != null ? map['expiry_date'].toString() : null,
+      lowStockThreshold: map['low_stock_threshold'] ?? 5,
     );
   }
 
@@ -54,6 +58,7 @@ class InventoryItem {
     double? costPrice,
     double? sellingPrice,
     String? expiryDate,
+    int? lowStockThreshold,
   }) {
     return InventoryItem(
       id: id ?? this.id,
@@ -63,6 +68,7 @@ class InventoryItem {
       costPrice: costPrice ?? this.costPrice,
       sellingPrice: sellingPrice ?? this.sellingPrice,
       expiryDate: expiryDate ?? this.expiryDate,
+      lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
     );
   }
 }

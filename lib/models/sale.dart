@@ -104,6 +104,24 @@ class CartItem {
   void resetPrice() => _customPrice = null;
   double get totalPrice => (unitPrice * quantity) - discount;
   String get itemName => inventoryItem.item;
+
+  Map<String, dynamic> toJson() => {
+        'inventory_item': inventoryItem.toMap(),
+        'quantity': quantity,
+        'discount': discount,
+        'custom_price': _customPrice,
+      };
+
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    final item = CartItem(
+      inventoryItem: InventoryItem.fromMap(json['inventory_item'] as Map<String, dynamic>),
+      quantity: json['quantity'] as int,
+      discount: (json['discount'] as num?)?.toDouble() ?? 0,
+    );
+    final customPrice = json['custom_price'];
+    if (customPrice != null) item.unitPrice = (customPrice as num).toDouble();
+    return item;
+  }
 }
 
 class HeldCart {
@@ -126,4 +144,26 @@ class HeldCart {
   });
 
   double get total => items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'items': items.map((i) => i.toJson()).toList(),
+        'customer_name': customerName,
+        'customer_phone': customerPhone,
+        'customer_address': customerAddress,
+        'held_at': heldAt.toIso8601String(),
+        'label': label,
+      };
+
+  factory HeldCart.fromJson(Map<String, dynamic> json) => HeldCart(
+        id: json['id'] as String,
+        items: (json['items'] as List)
+            .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        customerName: json['customer_name'] as String?,
+        customerPhone: json['customer_phone'] as String?,
+        customerAddress: json['customer_address'] as String?,
+        heldAt: DateTime.parse(json['held_at'] as String),
+        label: json['label'] as String? ?? '',
+      );
 }

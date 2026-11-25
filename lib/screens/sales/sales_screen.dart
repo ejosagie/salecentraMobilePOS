@@ -5,7 +5,6 @@ import '../../services/auth_service.dart';
 import '../../services/thermal_printer_service.dart';
 import '../../services/offline_sync_service.dart';
 import '../../services/cart_service.dart';
-import '../../services/offline_service.dart';
 import '../../models/customer.dart';
 import '../../models/inventory.dart';
 import '../../models/sale.dart';
@@ -40,9 +39,8 @@ class _SalesScreenState extends State<SalesScreen> {
   List<InventoryItem> _inventory = [];
   List<CartItem> _lastCompletedSaleItems = [];
   String? _lastCompletedReceiptId;
-  DateTime? _lastCompletedSaleDate;
   bool _isLoading = true;
-  int _selectedIndex = 1; // 0 = Items, 1 = Cart, 2 = Orders (staff only)
+  int _selectedIndex = 0; // 0 = Items, 1 = Cart, 2 = Orders (staff only)
   List<ShopOrder> _pendingOrders = [];
   bool _isLoadingOrders = false;
   final _productSearchController = TextEditingController();
@@ -55,7 +53,6 @@ class _SalesScreenState extends State<SalesScreen> {
   List<Customer> _customerSearchResults = [];
   bool _isSearchingCustomers = false;
   bool _showCustomerFields = false;
-  Customer? _selectedCustomer;
 
   @override
   void initState() {
@@ -73,10 +70,17 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _loadData() async {
+    await CartService.instance.load();
     final user = await _authService.getCurrentUser();
     if (user == null) return;
 
     final inventory = await _offlineSync.getInventoryWithFallback(user.id);
+
+    // Refresh stock on restored cart items so stale cached values don't block sales
+    for (final cartItem in CartService.instance.cart) {
+      final match = inventory.where((i) => i.id == cartItem.inventoryItem.id).firstOrNull;
+      if (match != null) cartItem.inventoryItem.stock = match.stock;
+    }
 
     setState(() {
       _user = user;
@@ -171,6 +175,8 @@ class _SalesScreenState extends State<SalesScreen> {
       setState(() => CartService.instance.cart.add(CartItem(inventoryItem: item)));
     }
 
+    CartService.instance.save();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${item.item} added to cart (${CartService.instance.cart.length} item types)'),
@@ -189,6 +195,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   void _removeFromCart(int index) {
     setState(() => CartService.instance.cart.removeAt(index));
+    CartService.instance.save();
   }
 
   void _updateQuantity(int index, int delta) {
@@ -207,6 +214,7 @@ class _SalesScreenState extends State<SalesScreen> {
           item.discount = subtotal;
         }
       });
+      CartService.instance.save();
     }
   }
 
@@ -237,7 +245,6 @@ class _SalesScreenState extends State<SalesScreen> {
 
   void _selectCustomer(Customer customer) {
     setState(() {
-      _selectedCustomer = customer;
       _customerNameController.text = customer.name;
       _customerPhoneController.text = customer.phone ?? '';
       _customerAddressController.text = customer.address ?? '';
@@ -248,7 +255,6 @@ class _SalesScreenState extends State<SalesScreen> {
 
   void _clearCustomer() {
     setState(() {
-      _selectedCustomer = null;
       _customerNameController.clear();
       _customerPhoneController.clear();
       _customerAddressController.clear();
@@ -293,6 +299,7 @@ class _SalesScreenState extends State<SalesScreen> {
       _clearCustomer();
       _selectedIndex = 0;
     });
+    CartService.instance.save();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Cart held for "$label". Start a new sale.'),
@@ -341,6 +348,7 @@ class _SalesScreenState extends State<SalesScreen> {
       setState(() {
         CartService.instance.heldCarts.removeAt(index);
       });
+      CartService.instance.save();
       _showError('All items in this held cart are out of stock. Cart discarded.');
       return;
     }
@@ -356,6 +364,7 @@ class _SalesScreenState extends State<SalesScreen> {
       CartService.instance.heldCarts.removeAt(index);
       _selectedIndex = 1;
     });
+    CartService.instance.save();
 
     if (warnings.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -379,6 +388,7 @@ class _SalesScreenState extends State<SalesScreen> {
     if (index < 0 || index >= CartService.instance.heldCarts.length) return;
     final held = CartService.instance.heldCarts[index];
     setState(() => CartService.instance.heldCarts.removeAt(index));
+    CartService.instance.save();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Held cart "${held.label}" discarded.'),
@@ -549,6 +559,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (discount == null || !mounted) return;
     setState(() => item.discount = discount);
+    CartService.instance.save();
   }
 
   Future<void> _showEditPriceDialog(int index) async {
@@ -607,6 +618,7 @@ class _SalesScreenState extends State<SalesScreen> {
         item.unitPrice = newPrice;
       }
     });
+    CartService.instance.save();
   }
 
   double get totalAmount => CartService.instance.cart.fold(0, (sum, item) => sum + item.totalPrice);
@@ -721,7 +733,6 @@ class _SalesScreenState extends State<SalesScreen> {
           })
           .toList();
       _lastCompletedReceiptId = receiptId;
-      _lastCompletedSaleDate = now;
       
       final customerName = _customerNameController.text.trim();
       final customerPhone = _customerPhoneController.text.trim();
@@ -813,6 +824,7 @@ class _SalesScreenState extends State<SalesScreen> {
           _isLoading = false;
           _clearCustomer();
         });
+        CartService.instance.save();
         _loadData();
       }
     }
@@ -872,7 +884,6 @@ class _SalesScreenState extends State<SalesScreen> {
     final soldItems = _lastCompletedSaleItems;
     final soldTotal = soldItems.fold(0.0, (sum, item) => sum + item.totalPrice);
     final receiptId = _lastCompletedReceiptId;
-    final saleDate = _lastCompletedSaleDate;
 
     showDialog(
       context: context,
@@ -938,9 +949,9 @@ class _SalesScreenState extends State<SalesScreen> {
                 CartService.instance.cart.clear();
                 _lastCompletedSaleItems.clear();
                 _lastCompletedReceiptId = null;
-                _lastCompletedSaleDate = null;
                 _selectedIndex = 1;
               });
+              CartService.instance.save();
             },
             child: const Text('New Sale'),
           ),
@@ -1003,7 +1014,8 @@ class _SalesScreenState extends State<SalesScreen> {
                 child: _buildTabButton('Items', 0, Icons.inventory_2_outlined),
               ),
               Expanded(
-                child: _buildTabButton('Cart (${CartService.instance.cart.length})', 1, Icons.shopping_cart_outlined),
+                child: _buildTabButton('Cart', 1, Icons.shopping_cart_outlined,
+                    badgeCount: CartService.instance.cart.length),
               ),
               if (CartService.instance.heldCarts.isNotEmpty)
                 Expanded(
@@ -1224,8 +1236,9 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
-  Widget _buildTabButton(String label, int index, IconData icon) {
+  Widget _buildTabButton(String label, int index, IconData icon, {int? badgeCount}) {
     final isSelected = _selectedIndex == index;
+    final showBadge = badgeCount != null && badgeCount > 0;
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
@@ -1237,10 +1250,14 @@ class _SalesScreenState extends State<SalesScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
+            Badge(
+              isLabelVisible: showBadge,
+              label: showBadge ? Text('$badgeCount') : null,
+              child: Icon(
+                icon,
+                size: 18,
+                color: isSelected ? Colors.white : AppTheme.textSecondary,
+              ),
             ),
             const SizedBox(width: 8),
             Text(

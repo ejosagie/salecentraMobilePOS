@@ -69,6 +69,7 @@ class AuthService {
   }
 
   Future<User?> login(String email, String password) async {
+    await CartService.instance.clear();
     final response = await ApiService.post('/auth/login', {
       'email': email,
       'password': password,
@@ -110,6 +111,7 @@ class AuthService {
     required String staffName,
     required String password,
   }) async {
+    await CartService.instance.clear();
     final response = await ApiService.post('/auth/staff-login', {
       'email': email,
       'staff_name': staffName,
@@ -186,7 +188,7 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    CartService.instance.clear();
+    await CartService.instance.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentUserKey);
     await prefs.remove(_isStaffLoginKey);
